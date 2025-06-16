@@ -1,33 +1,37 @@
 {
   "Version": 1,
-  "WorkspaceRootPath": "C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\Process-Multiplexer-and-CLI\\Project_Folder_2\\",
+  "WorkspaceRootPath": "C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\csopesy-mo1\\Project_Folder_2\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{0C6DD62B-8F08-45CC-BD87-E5E941DD9964}|Project_Folder_2\\Project_Folder_2.vcxproj|C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\Process-Multiplexer-and-CLI\\Project_Folder_2\\Project_Folder_2\\Console.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "AbsoluteMoniker": "D:0:0:{0C6DD62B-8F08-45CC-BD87-E5E941DD9964}|Project_Folder_2\\Project_Folder_2.vcxproj|C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\csopesy-mo1\\Project_Folder_2\\Project_Folder_2\\Console.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{0C6DD62B-8F08-45CC-BD87-E5E941DD9964}|Project_Folder_2\\Project_Folder_2.vcxproj|solutionrelative:Project_Folder_2\\Console.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{0C6DD62B-8F08-45CC-BD87-E5E941DD9964}|Project_Folder_2\\Project_Folder_2.vcxproj|C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\Process-Multiplexer-and-CLI\\Project_Folder_2\\Project_Folder_2\\Core.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{0C6DD62B-8F08-45CC-BD87-E5E941DD9964}|Project_Folder_2\\Project_Folder_2.vcxproj|solutionrelative:Project_Folder_2\\Core.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+      "AbsoluteMoniker": "D:0:0:{0C6DD62B-8F08-45CC-BD87-E5E941DD9964}|Project_Folder_2\\Project_Folder_2.vcxproj|C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\csopesy-mo1\\Project_Folder_2\\Project_Folder_2\\config.txt||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{0C6DD62B-8F08-45CC-BD87-E5E941DD9964}|Project_Folder_2\\Project_Folder_2.vcxproj|solutionrelative:Project_Folder_2\\config.txt||{8B382828-6202-11D1-8870-0000F87579D2}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{0C6DD62B-8F08-45CC-BD87-E5E941DD9964}|Project_Folder_2\\Project_Folder_2.vcxproj|C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\Process-Multiplexer-and-CLI\\Project_Folder_2\\Project_Folder_2\\main.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "AbsoluteMoniker": "D:0:0:{0C6DD62B-8F08-45CC-BD87-E5E941DD9964}|Project_Folder_2\\Project_Folder_2.vcxproj|C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\csopesy-mo1\\Project_Folder_2\\Project_Folder_2\\main.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{0C6DD62B-8F08-45CC-BD87-E5E941DD9964}|Project_Folder_2\\Project_Folder_2.vcxproj|solutionrelative:Project_Folder_2\\main.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{0C6DD62B-8F08-45CC-BD87-E5E941DD9964}|Project_Folder_2\\Project_Folder_2.vcxproj|C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\Process-Multiplexer-and-CLI\\Project_Folder_2\\Project_Folder_2\\Process.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "AbsoluteMoniker": "D:0:0:{0C6DD62B-8F08-45CC-BD87-E5E941DD9964}|Project_Folder_2\\Project_Folder_2.vcxproj|C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\csopesy-mo1\\Project_Folder_2\\Project_Folder_2\\Core.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{0C6DD62B-8F08-45CC-BD87-E5E941DD9964}|Project_Folder_2\\Project_Folder_2.vcxproj|solutionrelative:Project_Folder_2\\Core.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{0C6DD62B-8F08-45CC-BD87-E5E941DD9964}|Project_Folder_2\\Project_Folder_2.vcxproj|C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\csopesy-mo1\\Project_Folder_2\\Project_Folder_2\\Process.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{0C6DD62B-8F08-45CC-BD87-E5E941DD9964}|Project_Folder_2\\Project_Folder_2.vcxproj|solutionrelative:Project_Folder_2\\Process.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{0C6DD62B-8F08-45CC-BD87-E5E941DD9964}|Project_Folder_2\\Project_Folder_2.vcxproj|C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\Process-Multiplexer-and-CLI\\Project_Folder_2\\Project_Folder_2\\Scheduler.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{0C6DD62B-8F08-45CC-BD87-E5E941DD9964}|Project_Folder_2\\Project_Folder_2.vcxproj|solutionrelative:Project_Folder_2\\Scheduler.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{0C6DD62B-8F08-45CC-BD87-E5E941DD9964}|Project_Folder_2\\Project_Folder_2.vcxproj|C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\Process-Multiplexer-and-CLI\\Project_Folder_2\\Project_Folder_2\\Screen.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "AbsoluteMoniker": "D:0:0:{0C6DD62B-8F08-45CC-BD87-E5E941DD9964}|Project_Folder_2\\Project_Folder_2.vcxproj|C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\csopesy-mo1\\Project_Folder_2\\Project_Folder_2\\Screen.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{0C6DD62B-8F08-45CC-BD87-E5E941DD9964}|Project_Folder_2\\Project_Folder_2.vcxproj|solutionrelative:Project_Folder_2\\Screen.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{0C6DD62B-8F08-45CC-BD87-E5E941DD9964}|Project_Folder_2\\Project_Folder_2.vcxproj|C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\Process-Multiplexer-and-CLI\\Project_Folder_2\\Project_Folder_2\\ThreadedQueue.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "AbsoluteMoniker": "D:0:0:{0C6DD62B-8F08-45CC-BD87-E5E941DD9964}|Project_Folder_2\\Project_Folder_2.vcxproj|C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\csopesy-mo1\\Project_Folder_2\\Project_Folder_2\\Scheduler.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{0C6DD62B-8F08-45CC-BD87-E5E941DD9964}|Project_Folder_2\\Project_Folder_2.vcxproj|solutionrelative:Project_Folder_2\\Scheduler.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{0C6DD62B-8F08-45CC-BD87-E5E941DD9964}|Project_Folder_2\\Project_Folder_2.vcxproj|C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\csopesy-mo1\\Project_Folder_2\\Project_Folder_2\\ThreadedQueue.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{0C6DD62B-8F08-45CC-BD87-E5E941DD9964}|Project_Folder_2\\Project_Folder_2.vcxproj|solutionrelative:Project_Folder_2\\ThreadedQueue.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     }
   ],
@@ -38,15 +42,28 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 5,
+          "SelectedChildIndex": 6,
           "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "config.txt",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\csopesy-mo1\\Project_Folder_2\\Project_Folder_2\\config.txt",
+              "RelativeDocumentMoniker": "Project_Folder_2\\config.txt",
+              "ToolTip": "C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\csopesy-mo1\\Project_Folder_2\\Project_Folder_2\\config.txt",
+              "RelativeToolTip": "Project_Folder_2\\config.txt",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAYAAAAQAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003109|",
+              "WhenOpened": "2025-06-16T19:10:36.131Z",
+              "EditorCaption": ""
+            },
             {
               "$type": "Document",
               "DocumentIndex": 5,
               "Title": "Screen.h",
-              "DocumentMoniker": "C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\Process-Multiplexer-and-CLI\\Project_Folder_2\\Project_Folder_2\\Screen.h",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\csopesy-mo1\\Project_Folder_2\\Project_Folder_2\\Screen.h",
               "RelativeDocumentMoniker": "Project_Folder_2\\Screen.h",
-              "ToolTip": "C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\Process-Multiplexer-and-CLI\\Project_Folder_2\\Project_Folder_2\\Screen.h",
+              "ToolTip": "C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\csopesy-mo1\\Project_Folder_2\\Project_Folder_2\\Screen.h",
               "RelativeToolTip": "Project_Folder_2\\Screen.h",
               "ViewState": "AQIAAAAAAAAAAAAAAAAAAAQAAAAAAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
@@ -57,9 +74,9 @@
               "$type": "Document",
               "DocumentIndex": 2,
               "Title": "main.cpp",
-              "DocumentMoniker": "C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\Process-Multiplexer-and-CLI\\Project_Folder_2\\Project_Folder_2\\main.cpp",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\csopesy-mo1\\Project_Folder_2\\Project_Folder_2\\main.cpp",
               "RelativeDocumentMoniker": "Project_Folder_2\\main.cpp",
-              "ToolTip": "C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\Process-Multiplexer-and-CLI\\Project_Folder_2\\Project_Folder_2\\main.cpp",
+              "ToolTip": "C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\csopesy-mo1\\Project_Folder_2\\Project_Folder_2\\main.cpp",
               "RelativeToolTip": "Project_Folder_2\\main.cpp",
               "ViewState": "AQIAAAAAAAAAAAAAAAAAAAUAAAABAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
@@ -68,37 +85,36 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 6,
               "Title": "Scheduler.h",
-              "DocumentMoniker": "C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\Process-Multiplexer-and-CLI\\Project_Folder_2\\Project_Folder_2\\Scheduler.h",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\csopesy-mo1\\Project_Folder_2\\Project_Folder_2\\Scheduler.h",
               "RelativeDocumentMoniker": "Project_Folder_2\\Scheduler.h",
-              "ToolTip": "C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\Process-Multiplexer-and-CLI\\Project_Folder_2\\Project_Folder_2\\Scheduler.h",
+              "ToolTip": "C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\csopesy-mo1\\Project_Folder_2\\Project_Folder_2\\Scheduler.h",
               "RelativeToolTip": "Project_Folder_2\\Scheduler.h",
               "ViewState": "AQIAAAAAAAAAAAAAAAAAABMAAAAAAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2025-06-16T13:58:41.379Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-06-16T13:58:41.379Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 4,
               "Title": "Process.h",
-              "DocumentMoniker": "C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\Process-Multiplexer-and-CLI\\Project_Folder_2\\Project_Folder_2\\Process.h",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\csopesy-mo1\\Project_Folder_2\\Project_Folder_2\\Process.h",
               "RelativeDocumentMoniker": "Project_Folder_2\\Process.h",
-              "ToolTip": "C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\Process-Multiplexer-and-CLI\\Project_Folder_2\\Project_Folder_2\\Process.h",
+              "ToolTip": "C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\csopesy-mo1\\Project_Folder_2\\Project_Folder_2\\Process.h",
               "RelativeToolTip": "Project_Folder_2\\Process.h",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAUAAAASAAAA",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAABIAAAAXAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
               "WhenOpened": "2025-06-16T13:35:18.963Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 3,
               "Title": "Core.h",
-              "DocumentMoniker": "C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\Process-Multiplexer-and-CLI\\Project_Folder_2\\Project_Folder_2\\Core.h",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\csopesy-mo1\\Project_Folder_2\\Project_Folder_2\\Core.h",
               "RelativeDocumentMoniker": "Project_Folder_2\\Core.h",
-              "ToolTip": "C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\Process-Multiplexer-and-CLI\\Project_Folder_2\\Project_Folder_2\\Core.h",
+              "ToolTip": "C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\csopesy-mo1\\Project_Folder_2\\Project_Folder_2\\Core.h",
               "RelativeToolTip": "Project_Folder_2\\Core.h",
               "ViewState": "AQIAAAAAAAAAAAAAAAAAAA8AAAAAAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
@@ -109,27 +125,26 @@
               "$type": "Document",
               "DocumentIndex": 0,
               "Title": "Console.h",
-              "DocumentMoniker": "C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\Process-Multiplexer-and-CLI\\Project_Folder_2\\Project_Folder_2\\Console.h",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\csopesy-mo1\\Project_Folder_2\\Project_Folder_2\\Console.h",
               "RelativeDocumentMoniker": "Project_Folder_2\\Console.h",
-              "ToolTip": "C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\Process-Multiplexer-and-CLI\\Project_Folder_2\\Project_Folder_2\\Console.h",
+              "ToolTip": "C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\csopesy-mo1\\Project_Folder_2\\Project_Folder_2\\Console.h",
               "RelativeToolTip": "Project_Folder_2\\Console.h",
-              "ViewState": "AQIAADMAAAAAAAAAAAAAAE0AAAAAAAAA",
+              "ViewState": "AQIAAE0AAAAAAAAAAAAAAJUAAAAgAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
               "WhenOpened": "2025-06-16T13:34:57.943Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 7,
               "Title": "ThreadedQueue.h",
-              "DocumentMoniker": "C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\Process-Multiplexer-and-CLI\\Project_Folder_2\\Project_Folder_2\\ThreadedQueue.h",
+              "DocumentMoniker": "C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\csopesy-mo1\\Project_Folder_2\\Project_Folder_2\\ThreadedQueue.h",
               "RelativeDocumentMoniker": "Project_Folder_2\\ThreadedQueue.h",
-              "ToolTip": "C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\Process-Multiplexer-and-CLI\\Project_Folder_2\\Project_Folder_2\\ThreadedQueue.h",
+              "ToolTip": "C:\\Users\\ADMIN\\Documents\\FINAL CSOPESY Files\\csopesy-mo1\\Project_Folder_2\\Project_Folder_2\\ThreadedQueue.h",
               "RelativeToolTip": "Project_Folder_2\\ThreadedQueue.h",
               "ViewState": "AQIAAAEAAAAAAAAAAAAAAAEAAAAAAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2025-06-16T13:32:44.204Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-06-16T13:32:44.204Z"
             }
           ]
         }
