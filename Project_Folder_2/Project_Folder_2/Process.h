@@ -21,6 +21,11 @@ public:
         vector<string> args;       // raw arguments
     };
 
+    struct LoopState {
+        size_t startIns;   // Index of FOR instruction in insList
+        uint16_t repeats;
+    };
+
     //  Constructor / basic getters
 
     Process(int pid, string name);
@@ -43,6 +48,7 @@ public:
 
     void execute(const Instruction& ins);
     void genRandInst(vector<Instruction>& insList);
+    bool runOneInstruction();
 
 private:
 
@@ -56,7 +62,8 @@ private:
     vector<Instruction> insList;         // program
     size_t insCount_ = 0;       // program counter
     unordered_map<string, uint16_t> vars;         // DECLARE, ADD, SUB
-    vector<size_t> loopStack;    // loop counters are stored here
+    std::vector<LoopState> loopStack; // loop counters are stored here
+
     
     
 

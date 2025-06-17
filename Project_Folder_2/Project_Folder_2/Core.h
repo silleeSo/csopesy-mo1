@@ -35,7 +35,7 @@ private:
     void workerLoop(shared_ptr<Process> p, uint64_t quantum);
 
     int           id_;
-    bool  busy_{ false };
+    atomic<bool> busy_; // Made busy atomic for multithreaded correctness pu
     thread        worker_;
     shared_ptr<Process> runningProcess;
 
