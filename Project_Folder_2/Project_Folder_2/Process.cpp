@@ -6,17 +6,57 @@
 #include <unordered_map>
 #include <utility>
 #include <string>
+#include <random>
 
 #include "Process.h"
 
 using namespace std;
 
-void genRandInst(vector<Process::Instruction>& insList) {
+void Process::genRandInst(vector<Process::Instruction>& insList) {
+    mt19937 rng(static_cast<unsigned>(time(nullptr)));
+    uniform_int_distribution<int> countDist(1, 10);    // number of instructions
+    uniform_int_distribution<int> opcodeDist(1, 6);    // opcode 1–5
+    uniform_int_distribution<int> valueDist(1, 100);   // values for args
+    vector<string> vars = { "x", "y", "z", "a", "b" };
+
+    int instCount = countDist(rng);
+
+    for (int i = 0; i < instCount; i++) {
+        uint8_t opcode = opcodeDist(rng);
+        Process::Instruction instr;
+        instr.opcode = opcode;
+
+        switch (opcode) {
+        case 1: { // DECLARE(var, value)
+            std::string var = vars[rng() % vars.size()];
+            instr.args = { var, to_string(valueDist(rng)) };
+            break;
+        }
+        case 2: // ADD(var1, var2/value, var3/value)
+        case 3: { // SUBTRACT
+            std::string dest = vars[rng() % vars.size()];
+            std::string arg1 = rng() % 2 ? vars[rng() % vars.size()] : to_string(valueDist(rng));
+            std::string arg2 = rng() % 2 ? vars[rng() % vars.size()] : to_string(valueDist(rng));
+            instr.args = { dest, arg1, arg2 };
+            break;
+        }
+        case 4: { // PRINT
+            instr.args.push_back("Hello world from processName");
+            break;
+        }
+        case 5: { // SLEEP
+            instr.args.push_back(to_string(rng() % 5 + 1)); // 1–5 ticks
+            break;
+        }
+        }
+
+        insList.push_back(instr);
+    }
 
 }
 
 
-Process::Process(int pid, string name)
+Process::Process(size_t pid, string name)
     : pid_(pid), name_(move(name)) { /* initialise members if needed */
     //TODO: add a function that randomizes and creates instruction list
     finished = false;
@@ -44,6 +84,7 @@ void Process::execute(const Instruction& ins) {
         const string& var = ins.args[0];
         uint16_t value = ins.args.size() == 2 ? clamp(getValue(ins.args[1])) : 0;
         vars[var] = value;
+        cout << "declared" << endl;
     }
 
     else if (ins.opcode == 2 && ins.args.size() == 3) { // ADD(var1, var2/value, var3/value)
@@ -51,6 +92,7 @@ void Process::execute(const Instruction& ins) {
         uint16_t a = getValue(ins.args[1]);
         uint16_t b = getValue(ins.args[2]);
         vars[dest] = clamp(static_cast<int64_t>(a) + b);
+        cout << "added" << endl;
     }
 
     else if (ins.opcode == 3 && ins.args.size() == 3) { // SUBTRACT(var1, var2/value, var3/value)
@@ -58,6 +100,7 @@ void Process::execute(const Instruction& ins) {
         uint16_t a = getValue(ins.args[1]);
         uint16_t b = getValue(ins.args[2]);
         vars[dest] = clamp(static_cast<int64_t>(a) - b);
+        cout << "sub" << endl;
     }
 
     else if (ins.opcode == 4) { // PRINT (msg)
@@ -83,6 +126,7 @@ void Process::execute(const Instruction& ins) {
     else if (ins.opcode == 5 && ins.args.size() == 1) { // SLEEP(X)
         uint8_t ticks = static_cast<uint8_t>(getValue(ins.args[0]));
         this_thread::sleep_for(chrono::milliseconds(10 * ticks)); // Simulate CPU tick sleep
+        cout << "sleep" << endl;
     }
 
     /*else if (ins.opcode == 6 && ins.args.size() >= 2) { // FOR (instruction_set_id, repeats)

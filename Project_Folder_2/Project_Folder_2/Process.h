@@ -23,9 +23,9 @@ public:
 
     //  Constructor / basic getters
 
-    Process(int pid, string name);
+    Process(size_t pid, string name);
 
-    int getPid() const {
+    size_t getPid() const {
         return pid_;
     }
     const string& getName() const {
@@ -44,13 +44,18 @@ public:
     void execute(const Instruction& ins);
     void genRandInst(vector<Instruction>& insList);
 
+    const vector<Instruction>& getInstructions() const {
+        return insList;
+    }
+
+
 private:
 
     //void execute(const Instruction& ins);   // execute ONE instruction
     //uint16_t valueOf(const string& tok);    // map lookup / literal (DO WE NEED THIS)
 
     //  DATA (must survive pre‑emption)
-    int pid_;
+    size_t pid_;
     string name_;
     bool finished;
     vector<Instruction> insList;         // program
