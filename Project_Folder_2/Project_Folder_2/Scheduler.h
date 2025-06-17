@@ -4,8 +4,9 @@
 #include <atomic>
 #include <memory>
 #include <string>
-#include "Process.h";
-#include "Core.h";
+#include "Process.h"
+#include "Core.h"
+#include "ThreadedQueue.h"
 using namespace std;
 
 /*
@@ -27,6 +28,10 @@ public:
 
     void start();  // start scheduler thread
     void stop();   // join scheduler thread
+    void requeueProcess(shared_ptr<Process> p);
+    void submit(shared_ptr<Process> p);
+    void notifyProcessFinished();
+    void waitUntilAllDone();
 
     shared_ptr<Process> createProcess(const string& name);
 
@@ -37,6 +42,8 @@ private:
     uint64_t quantum;       // quantum per slice
     bool running = false;
     thread schedThread;
+    atomic<int> totalProcesses{ 0 };
+    atomic<int> finishedProcesses{ 0 };
 
     vector<shared_ptr<Core>> cores; //oki but shared pointer (what if core children thread ng scheduler)
     TSQueue<shared_ptr<Process>>* readyQ;   // inject or own queue

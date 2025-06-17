@@ -17,7 +17,7 @@ using namespace std;
 class Process {
 public:
     struct Instruction {
-        uint8_t opcode;            // numeric command ID
+        uint8_t opcode = 0;          // numeric command ID
         vector<string> args;       // raw arguments
     };
 
@@ -47,7 +47,7 @@ public:
     }
 
     void execute(const Instruction& ins);
-    void genRandInst(vector<Instruction>& insList);
+    void genRandInst();
     bool runOneInstruction();
 
 private:

@@ -1,5 +1,8 @@
 ﻿#include "Console.h"
 #include "Process.h"
+#include "Core.h"
+#include "Scheduler.h"
+
 /*
 int main() {
     Console cli;
@@ -7,49 +10,31 @@ int main() {
     return 0;
 }*/
 
-//int main() {
-//    Process p(1, "TestProc");
-//
-//    // DECLARE x = 10
-//    p.execute({ 1, {"x", "10"} });
-//
-//    // ADD y = x + 5 → y = 10 + 5 = 15
-//    p.execute({ 2, {"y", "x", "5"} });
-//
-//    // SUBTRACT z = y - 3 → z = 15 - 3 = 12
-//    p.execute({ 3, {"z", "y", "3"} });
-//
-//    // PRINT "Value of z is: " + z
-//    p.execute({ 4, {"Value of z is: ", "z"} });
-//
-//    // SLEEP 2 ticks (should delay ~20ms)
-//    p.execute({ 5, {"2"} });
-//
-//    // PRINT default message
-//    p.execute({ 4, {} });
-//
-//    return 0;
-//}
-
 int main() {
-    cout << "--- Manual Unit Test ---" << endl;
-    Process p1(1, "ManualProc");
+    srand(static_cast<unsigned int>(time(nullptr)));
 
-    p1.execute({ 1, {"x", "10"} });
-    p1.execute({ 2, {"y", "x", "5"} });
-    p1.execute({ 3, {"z", "y", "3"} });
-    p1.execute({ 4, {"Value of z is: ", "z"} });
-    p1.execute({ 5, {"2"} });
-    p1.execute({ 4, {} });
+    Scheduler scheduler(2, "rr", 50);
 
-    cout << "\n--- Full Instruction List Simulation ---" << endl;
-    Process p2(2, "AutoProc");
+    auto p1 = make_shared<Process>(1, "P1");
+    auto p2 = make_shared<Process>(2, "P2");
+    auto p3 = make_shared<Process>(3, "P3");
 
-    while (p2.runOneInstruction()) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
+    p1->genRandInst();
+    p2->genRandInst();
+    p3->genRandInst();
 
-    cout << "AutoProc finished." << endl;
+    scheduler.submit(p1);
+    scheduler.submit(p2);
+    scheduler.submit(p3);
+
+    scheduler.start();
+    scheduler.waitUntilAllDone();
+
+    cout << "All processes finished. Shutting down." << endl;
 
     return 0;
 }
+
+
+
+

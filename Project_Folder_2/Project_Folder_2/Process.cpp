@@ -11,17 +11,11 @@
 
 using namespace std;
 
-void genRandInst(vector<Process::Instruction>& insList) {
-
-}
-
-
 Process::Process(int pid, string name)
-    : pid_(pid), name_(move(name)) { /* initialise members if needed */
-    //TODO: add a function that randomizes and creates instruction list
-    finished = false;
-    genRandInst(insList);
+    : pid_(pid), name_(move(name)), finished(false) {
+    genRandInst();
 }
+
 
 void Process::execute(const Instruction& ins) {
     
@@ -119,7 +113,8 @@ void Process::execute(const Instruction& ins) {
 
 }
 
-void Process::genRandInst(vector<Instruction>& insList) {
+void Process::genRandInst() {
+    insList.clear();
     // Hardcoded values — later we can load these from config.txt
     int min_ins = 1000;
     int max_ins = 2000;
@@ -233,4 +228,5 @@ bool Process::runOneInstruction() {
     if (insList[insCount_].opcode != 7 || loopStack.empty() || loopStack.back().repeats == 0)
         insCount_++;
 
+    return true;
 }

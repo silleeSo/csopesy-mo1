@@ -52,5 +52,17 @@ public:
         // return item
         return item;
     }
+
+    // Non-blocking try_pop
+    bool try_pop(T& item) {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        if (m_queue.empty()) {
+            return false;
+        }
+        item = m_queue.front();
+        m_queue.pop();
+        return true;
+    }
+
 };
 
