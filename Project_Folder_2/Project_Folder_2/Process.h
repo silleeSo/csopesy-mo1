@@ -10,7 +10,7 @@
 #include <ctime> // For current timestamp in smi()
 #include <iomanip> // For formatting timestamp in smi()
 
-using namespace std;
+// Removed using namespace std; to be explicit
 /*
 * PROCESS CLASS OVERVIEW
 *
@@ -24,7 +24,7 @@ class Process {
 public:
     struct Instruction {
         uint8_t opcode = 0;          // numeric command ID
-        vector<string> args;       // raw arguments
+        std::vector<std::string> args;       // raw arguments
     };
 
     struct LoopState {
@@ -34,12 +34,12 @@ public:
 
     //  Constructor / basic getters
 
-    Process(int pid, string name);
+    Process(int pid, std::string name);
 
     int getPid() const {
         return pid_;
     }
-    const string& getName() const {
+    const std::string& getName() const {
         return name_;
     }
     bool isFinished() const {
@@ -57,17 +57,17 @@ public:
     size_t getTotalInstructions() const {
         return insList.size();
     }
-    const vector<string>& getLogs() const {
+    const std::vector<std::string>& getLogs() const {
         return logs_;
     }
-    const unordered_map<string, uint16_t>& getVariables() const {
+    const std::unordered_map<std::string, uint16_t>& getVariables() const {
         return vars;
     }
 
 
     //  process‑smi helper → returns one‑liner status for Screen
-    string smi() const {
-        stringstream ss;
+    std::string smi() const {
+        std::stringstream ss;
         ss << "Process name: " << name_ << "\n";
         ss << "ID: " << pid_ << "\n";
 
@@ -100,6 +100,10 @@ public:
         else if (isSleeping()) {
             ss << "Status: Sleeping (Until tick: " << sleepTargetTick_ << ")\n";
         }
+        else {
+            ss << "Status: Running\n"; // Added explicit running status
+        }
+
 
         ss << "Current instruction line: " << getCurrentInstructionIndex() << "\n";
         ss << "Lines of code: " << getTotalInstructions() << "\n";
@@ -130,14 +134,14 @@ private:
 
     //  DATA (must survive pre‑emption)
     int pid_;
-    string name_;
+    std::string name_;
     bool finished_; // Renamed from 'finished' for clarity with other bools
     bool isSleeping_ = false; // New: indicates if the process is in a SLEEP state
     uint64_t sleepTargetTick_ = 0; // New: The globalCpuTick value when sleep should end
 
-    vector<Instruction> insList;         // program
+    std::vector<Instruction> insList;         // program
     size_t insCount_ = 0;       // program counter
-    unordered_map<string, uint16_t> vars;         // DECLARE, ADD, SUB
+    std::unordered_map<std::string, uint16_t> vars;         // DECLARE, ADD, SUB
     std::vector<LoopState> loopStack; // loop counters are stored here
     std::vector<std::string> logs_; // New: Stores output from PRINT instructions for screen -s
 };

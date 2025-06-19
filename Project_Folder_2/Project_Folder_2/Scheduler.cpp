@@ -3,7 +3,7 @@
 #include <algorithm> // For std::remove_if
 #include <chrono> // For std::chrono::milliseconds
 #include <random> // For std::mt19937 and std::uniform_int_distribution
-#include <iostream> // For logging
+// Removed #include <iostream> to prevent direct console output from Scheduler
 
 // Static random device and generator for process generation
 static std::random_device scheduler_rd;
@@ -28,12 +28,18 @@ Scheduler::Scheduler(int num_cpu, const std::string& scheduler_type, uint64_t qu
     schedulerStartTime_(0)
 {
     cores_.reserve(numCpus_);
+    // Initialize cores and pass 'this' scheduler instance to them
     for (int i = 0; i < numCpus_; ++i) {
-        // Pass 'this' as the scheduler pointer, and the configured delay per exec
         cores_.push_back(std::make_unique<Core>(i, this, delayPerExec_));
-        // Correct initialization for std::atomic within vector
-        coreTicksUsed_.emplace_back(0ULL); // Initialize with 0ULL to be explicit about uint64_t
     }
+
+    // New explicit initialization for std::vector<std::atomic<uint64_t>>
+    // This avoids any potential implicit copy issues with resize.
+    coreTicksUsed_.clear(); // Ensure empty before adding
+    for (int i = 0; i < numCpus_; ++i) {
+        coreTicksUsed_.push_back(std::make_unique<std::atomic<uint64_t>>(0));
+    }
+
 }
 
 Scheduler::~Scheduler() {
@@ -59,10 +65,12 @@ void Scheduler::stop() {
 
         // Join the scheduler thread if it's joinable (it should be detached, but good practice)
         if (schedulerThread_.joinable()) {
+            std::cout << "[Scheduler] Joining scheduler thread." << std::endl; // Debugging
             schedulerThread_.join();
         }
         // Join the process generator thread
         if (processGenThread_.joinable()) {
+            std::cout << "[Scheduler] Joining process generator thread." << std::endl; // Debugging
             processGenThread_.join();
         }
 
@@ -73,6 +81,7 @@ void Scheduler::stop() {
                 // For this simulation, we just wait for current task to finish.
                 // This might block indefinitely if a process loops forever without sleeping/finishing.
                 // For now, assuming processes will eventually finish or yield.
+                std::cout << "[Scheduler] Waiting for Core-" << core->id_ << " to finish." << std::endl; // Debugging
             }
         }
     }
@@ -81,7 +90,7 @@ void Scheduler::stop() {
 void Scheduler::submit(std::shared_ptr<Process> p) {
     readyQueue_.push(p);
     activeProcessesCount_++;
-    cout << "[Scheduler] Process " << p->getName() << " (PID: " << p->getPid() << ") submitted. Total active: " << activeProcessesCount_.load() << endl;
+    std::cout << "[Scheduler] Process " << p->getName() << " (PID: " << p->getPid() << ") submitted. Total active: " << activeProcessesCount_.load() << std::endl; // Removed for clean console
 }
 
 void Scheduler::notifyProcessFinished() {
@@ -91,18 +100,18 @@ void Scheduler::notifyProcessFinished() {
     // We will adjust the schedulerLoop to manage runningProcesses_ more explicitly and
     // decrement activeProcessesCount_ when moving a process to finishedProcesses_.
     // For now, let's remove the decrement here to avoid double-decrement if the schedulerLoop also does it.
-    // cout << "[Scheduler] Process finished. Total active: " << activeProcessesCount_.load() << endl;
+    std::cout << "[Scheduler] Process finished. Total active: " << activeProcessesCount_.load() << std::endl; // Removed for clean console
 }
 
 void Scheduler::requeueProcess(std::shared_ptr<Process> p) {
     if (p->isSleeping()) {
         std::unique_lock<std::mutex> lock(sleepingProcessesMutex_);
         sleepingProcesses_.push_back(p);
-        cout << "[Scheduler] Process " << p->getName() << " (PID: " << p->getPid() << ") moved to sleeping queue." << endl;
+        std::cout << "[Scheduler] Process " << p->getName() << " (PID: " << p->getPid() << ") moved to sleeping queue." << std::endl; // Removed for clean console
     }
     else {
         readyQueue_.push(p);
-        cout << "[Scheduler] Process " << p->getName() << " (PID: " << p->getPid() << ") requeued to ready queue." << endl;
+        std::cout << "[Scheduler] Process " << p->getName() << " (PID: " << p->getPid() << ") requeued to ready queue." << std::endl; // Removed for clean console
     }
 }
 
@@ -112,7 +121,7 @@ void Scheduler::startProcessGeneration() {
         lastProcessGenTick_ = globalCpuTicks.load(); // Initialize last generation tick
         processGenThread_ = std::thread(&Scheduler::processGeneratorLoop, this);
         processGenThread_.detach(); // Run independently
-        cout << "[Scheduler] Process generation started." << endl;
+        std::cout << "[Scheduler] Process generation started." << std::endl; // Removed for clean console
     }
 }
 
@@ -122,17 +131,17 @@ void Scheduler::stopProcessGeneration() {
         if (processGenThread_.joinable()) {
             processGenThread_.join(); // Ensure the generator thread stops gracefully
         }
-        cout << "[Scheduler] Process generation stopped." << endl;
+        std::cout << "[Scheduler] Process generation stopped." << std::endl; // Removed for clean console
     }
 }
 
 void Scheduler::waitUntilAllDone() {
-    cout << "[Scheduler] Waiting for all " << activeProcessesCount_.load() << " active processes to finish..." << endl;
+    std::cout << "[Scheduler] Waiting for all " << activeProcessesCount_.load() << " active processes to finish..." << std::endl; // Removed for clean console
     // Wait until all processes (running, ready, sleeping) are completed
     while (activeProcessesCount_.load() > 0) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Sleep to prevent busy-waiting
     }
-    cout << "[Scheduler] All processes finished." << endl;
+    std::cout << "[Scheduler] All processes finished." << std::endl; // Removed for clean console
 }
 
 int Scheduler::getNextProcessId() {
@@ -156,13 +165,18 @@ std::vector<std::shared_ptr<Process>> Scheduler::getFinishedProcesses() const {
     return finishedProcesses_;
 }
 
+std::vector<std::shared_ptr<Process>> Scheduler::getSleepingProcesses() const {
+    std::unique_lock<std::mutex> lock(sleepingProcessesMutex_);
+    return sleepingProcesses_;
+}
+
 double Scheduler::getCpuUtilization() const {
     uint64_t currentSystemTicks = globalCpuTicks.load() - schedulerStartTime_.load();
     if (currentSystemTicks == 0 || numCpus_ == 0) return 0.0; // Avoid division by zero
 
     uint64_t totalCoresBusyTicks = 0;
     for (int i = 0; i < numCpus_; ++i) { // Iterate through cores for their current busy state
-        totalCoresBusyTicks += coreTicksUsed_[i].load(); // Accumulate individual core busy ticks
+        totalCoresBusyTicks += coreTicksUsed_[i]->load(); // Accumulate individual core busy ticks
     }
 
     // Utilization = (Total busy ticks across all cores) / (Total possible ticks * Number of CPUs)
@@ -186,12 +200,12 @@ int Scheduler::getCoresAvailable() const {
 
 void Scheduler::updateCoreUtilization(int coreId, uint64_t ticksUsed) {
     if (coreId >= 0 && coreId < numCpus_) {
-        coreTicksUsed_[coreId] += ticksUsed; // Atomically add ticks used by this core
+        coreTicksUsed_[coreId]->fetch_add(ticksUsed); // Atomically add ticks used by this core
     }
 }
 
 void Scheduler::schedulerLoop() {
-    cout << "[Scheduler] Main scheduler loop started." << endl;
+    std::cout << "[Scheduler] Main scheduler loop started." << std::endl; // Removed for clean console
     while (running_.load()) {
         // 1. Handle sleeping processes: Check if any sleeping processes should wake up
         {
@@ -212,7 +226,7 @@ void Scheduler::schedulerLoop() {
             // Re-queue woken processes
             for (const auto& p : wokenProcesses) {
                 readyQueue_.push(p);
-                cout << "[Scheduler] Process " << p->getName() << " (PID: " << p->getPid() << ") woke up and re-queued." << endl;
+                std::cout << "[Scheduler] Process " << p->getName() << " (PID: " << p->getPid() << ") woke up and re-queued." << std::endl; // Removed for clean console
             }
         } // sleepingProcessesMutex_ unlocked
 
@@ -233,7 +247,7 @@ void Scheduler::schedulerLoop() {
 
                     uint64_t quantumToUse = (schedulerType_ == "rr") ? quantumCycles_ : UINT64_MAX;
                     core->tryAssign(p, quantumToUse);
-                    cout << "[Scheduler] Assigned process " << p->getName() << " (PID: " << p->getPid() << ") to Core-" << core->id_ << endl;
+                    std::cout << "[Scheduler] Assigned process " << p->getName() << " (PID: " << p->getPid() << ") to Core-" << core->id_ << std::endl; // Removed for clean console
                 }
             }
         }
@@ -249,7 +263,7 @@ void Scheduler::schedulerLoop() {
                     if (p->isFinished()) {
                         finishedProcesses_.push_back(p); // Move to finished
                         activeProcessesCount_--; // Decrement active count as it's truly done
-                        cout << "[Scheduler] Process " << p->getName() << " (PID: " << p->getPid() << ") moved to finished. Active count: " << activeProcessesCount_.load() << endl;
+                        std::cout << "[Scheduler] Process " << p->getName() << " (PID: " << p->getPid() << ") moved to finished. Active count: " << activeProcessesCount_.load() << std::endl; // Removed for clean console
                         return true; // Remove from running
                     }
                     return false;
@@ -259,23 +273,23 @@ void Scheduler::schedulerLoop() {
 
         std::this_thread::sleep_for(std::chrono::milliseconds(10)); // Prevent busy-waiting in scheduler itself
     }
-    cout << "[Scheduler] Main scheduler loop stopped." << endl;
+    std::cout << "[Scheduler] Main scheduler loop stopped." << std::endl; // Removed for clean console
 }
 
 void Scheduler::processGeneratorLoop() {
-    cout << "[Scheduler] Process generator loop started." << endl;
+    std::cout << "[Scheduler] Process generator loop started." << std::endl; // Removed for clean console
     while (processGenEnabled_.load()) {
         uint64_t currentTicks = globalCpuTicks.load();
         if (currentTicks >= lastProcessGenTick_.load() + batchProcessFreq_) { // Check against the frequency
             // Generate a new process
-            string newProcessName = "p" + std::to_string(getNextProcessId());
+            std::string newProcessName = "p" + std::to_string(getNextProcessId());
             auto newProcess = std::make_shared<Process>(nextPid_.load() - 1, newProcessName); // PID is already incremented
             newProcess->genRandInst(minInstructions_, maxInstructions_);
             submit(newProcess);
             lastProcessGenTick_ = currentTicks; // Update last generation time
-            cout << "[Scheduler] Generated new process: " << newProcessName << ". Total active: " << activeProcessesCount_.load() << endl;
+            std::cout << "[Scheduler] Generated new process: " << newProcessName << ". Total active: " << activeProcessesCount_.load() << std::endl; // Removed for clean console
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(10)); // Check periodically
     }
-    cout << "[Scheduler] Process generator loop stopped." << endl;
+    std::cout << "[Scheduler] Process generator loop stopped." << std::endl; // Removed for clean console
 }

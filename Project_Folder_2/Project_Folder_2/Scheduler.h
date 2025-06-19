@@ -39,6 +39,8 @@ public:
     // Getters for Console to display status
     std::vector<std::shared_ptr<Process>> getRunningProcesses() const;
     std::vector<std::shared_ptr<Process>> getFinishedProcesses() const;
+    std::vector<std::shared_ptr<Process>> getSleepingProcesses() const; // New getter for sleeping processes
+
     double getCpuUtilization() const;
     int getCoresUsed() const;
     int getCoresAvailable() const;
@@ -83,7 +85,7 @@ private:
     std::atomic<int> activeProcessesCount_; // Count of processes that are running or in queue/sleeping
 
     // For CPU Utilization calculation
-    std::vector<std::atomic<uint64_t>> coreTicksUsed_; // Tracks ticks each core has been busy
+    std::vector<std::unique_ptr<std::atomic<uint64_t>>> coreTicksUsed_; // Tracks ticks each core has been busy
     std::atomic<uint64_t> totalSystemTicks_; // Total ticks the system has been running since scheduler start
     std::atomic<uint64_t> schedulerStartTime_; // Global CPU tick when scheduler started
 };

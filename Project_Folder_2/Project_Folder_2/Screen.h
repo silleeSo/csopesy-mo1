@@ -7,7 +7,7 @@
 #include <unordered_map> // For variables
 #include "Process.h"
 #include "GlobalState.h" // For globalCpuTicks in process-smi display
-using namespace std;
+// Removed using namespace std; to be explicit
 /*
     SCREEN OVERVIEW
     - wraps process basically
@@ -16,23 +16,23 @@ using namespace std;
 
 class Screen {
 public:
-    Screen(shared_ptr<Process> proc) : process{ proc } {}
+    Screen(std::shared_ptr<Process> proc) : process{ proc } {}
 
     // Enters the process screen loop.
     void run() {
         clearScreen();
-        string line;
+        std::string line;
         while (true) {
-            cout << process->getName() << ":> "; // Show process name in prompt
-            if (!getline(cin, line)) break;
+            std::cout << process->getName() << ":> "; // Show process name in prompt
+            if (!std::getline(std::cin, line)) break;
             if (line == "exit") break;
             handleCommand(line);
         }
-        cout << "Returning to main menu...\n";
+        std::cout << "Returning to main menu...\n";
     }
 
 private:
-    shared_ptr<Process> process;
+    std::shared_ptr<Process> process;
 
     // ----- helpers -----
 
@@ -42,24 +42,24 @@ private:
 #else
         system("clear");
 #endif
-        cout << "--- Process Screen for " << process->getName() << " (PID: " << process->getPid() << ") --- (type 'exit' to leave)\n";
-        cout << "Current Global CPU Tick: " << globalCpuTicks.load() << "\n\n";
+        std::cout << "--- Process Screen for " << process->getName() << " (PID: " << process->getPid() << ") --- (type 'exit' to leave)\n";
+        std::cout << "Current Global CPU Tick: " << globalCpuTicks.load() << "\n\n";
     }
 
 
-    void handleCommand(const string& cmd) {
+    void handleCommand(const std::string& cmd) {
         clearScreen(); // Clear screen on each command to refresh view
 
         if (cmd == "process-smi") {
             if (process) {
-                cout << process->smi() << endl; // Use the detailed smi method from Process
+                std::cout << process->smi() << std::endl; // Use the detailed smi method from Process
             }
             else {
-                cout << "Error: No process attached to this screen.\n";
+                std::cout << "Error: No process attached to this screen.\n";
             }
         }
         else {
-            cout << "Unknown screen command.\n";
+            std::cout << "Unknown screen command.\n";
         }
     }
 };

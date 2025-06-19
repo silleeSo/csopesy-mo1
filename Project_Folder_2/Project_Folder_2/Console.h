@@ -12,7 +12,7 @@
 #include <memory> // For unique_ptr and shared_ptr
 #include <vector>
 
-#include "Scheduler.h" 
+#include "Scheduler.h"
 #include "Screen.h"
 #include "Process.h"
 #include "GlobalState.h" // Include for globalCpuTicks
@@ -22,7 +22,7 @@
 #endif
 using namespace std;
 
-//CONFIG STRUCT 
+//CONFIG STRUCT
 
 struct Config {
     int          num_cpu = 1;
@@ -180,6 +180,16 @@ private:
                             }
                         }
                     }
+                    // Also check sleeping processes
+                    if (!nameExists) {
+                        for (const auto& p : scheduler_->getSleepingProcesses()) { // Assuming a getter for sleeping processes
+                            if (p->getName() == processName) {
+                                nameExists = true;
+                                break;
+                            }
+                        }
+                    }
+
 
                     if (nameExists) {
                         cout << "Error: Process with name '" << processName << "' already exists." << endl;
@@ -222,10 +232,24 @@ private:
                             }
                         }
                     }
+                    // Check sleeping processes if not found in running or finished
+                    if (!targetProcess) {
+                        for (const auto& p : scheduler_->getSleepingProcesses()) { // Assuming a getter for sleeping processes
+                            if (p->getName() == processName) {
+                                targetProcess = p;
+                                break;
+                            }
+                        }
+                    }
 
                     if (targetProcess) {
                         if (targetProcess->isFinished()) {
                             cout << "Process '" << processName << "' has finished execution." << endl;
+                            // Still allow attaching to a finished process screen to view its final state/logs
+                            activeScreen_ = make_unique<Screen>(targetProcess);
+                            activeScreen_->run(); // Enter process screen loop
+                            activeScreen_.reset(); // Clear active screen after exit
+                            clearScreen(); // Clear screen after returning from process screen
                         }
                         else {
                             activeScreen_ = make_unique<Screen>(targetProcess);
@@ -252,6 +276,16 @@ private:
                 else {
                     for (const auto& p : scheduler_->getRunningProcesses()) {
                         cout << p->smi() << endl; // Use process-smi helper
+                    }
+                }
+
+                cout << "\nSleeping processes:" << endl; // New section for sleeping processes
+                if (scheduler_->getSleepingProcesses().empty()) {
+                    cout << "  No processes currently sleeping." << endl;
+                }
+                else {
+                    for (const auto& p : scheduler_->getSleepingProcesses()) {
+                        cout << p->smi() << endl;
                     }
                 }
 
@@ -301,6 +335,16 @@ private:
             }
         }
 
+        out << "\nSleeping processes:" << endl; // New section for sleeping processes in report
+        if (scheduler_->getSleepingProcesses().empty()) {
+            out << "  No processes currently sleeping." << endl;
+        }
+        else {
+            for (const auto& p : scheduler_->getSleepingProcesses()) {
+                out << p->smi() << endl;
+            }
+        }
+
         out << "\nFinished processes:" << endl;
         if (scheduler_->getFinishedProcesses().empty()) {
             out << "  No processes have finished." << endl;
@@ -313,7 +357,7 @@ private:
         cout << "Report written to csopesy-log.txt\n";
     }
 
-    //CONFIG LOADER 
+    //CONFIG LOADER
     static string stripQuotes(string s) {
         if (!s.empty() && (s.front() == '\"' || s.front() == '\'')) s.erase(0, 1);
         if (!s.empty() && (s.back() == '\"' || s.back() == '\'')) s.pop_back();
@@ -337,6 +381,7 @@ private:
             cfg_.delay_per_exec = stoull(kv.at("delay-per-exec"));
         }
         catch (const out_of_range& oor) {
+            (void)oor; // Suppress unused variable warning
             cout << "Malformed config.txt – missing field or value out of range (stoull conversion): " << oor.what() << '\n';
             return false;
         }

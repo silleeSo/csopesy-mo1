@@ -3,7 +3,7 @@
 #include "Scheduler.h" // Needed for Scheduler methods being called
 #include "GlobalState.h" // Needed for globalCpuTicks
 
-#include <iostream>
+// Removed #include <iostream> to prevent direct console output from Core
 
 // Constructor now accepts delayPerExec
 Core::Core(int id, Scheduler* scheduler, uint64_t delayPerExec)
@@ -40,11 +40,11 @@ void Core::workerLoop(shared_ptr<Process> p, uint64_t quantum) {
     uint64_t startTicks = globalCpuTicks.load(); // Record starting ticks for utilization calculation
 
     if (quantum == UINT64_MAX) { // FCFS Mode
-        cout << "[Core-" << id_ << "] FCFS Mode: Running process " << p->getName() << " to completion." << endl;
+        // cout << "[Core-" << id_ << "] FCFS Mode: Running process " << p->getName() << " to completion." << endl; // Removed for clean console
         while (!p->isFinished()) {
             // Check if process has gone to sleep
             if (p->isSleeping()) {
-                cout << "[Core-" << id_ << "] Process " << p->getName() << " entered SLEEP state. Yielding CPU." << endl;
+                // cout << "[Core-" << id_ << "] Process " << p->getName() << " entered SLEEP state. Yielding CPU." << endl; // Removed for clean console
                 if (scheduler != nullptr) {
                     scheduler->requeueProcess(p); // Scheduler will move it to sleeping processes
                 }
@@ -60,24 +60,21 @@ void Core::workerLoop(shared_ptr<Process> p, uint64_t quantum) {
                 // Busy-wait or yield thread time
                 std::this_thread::yield();
             }
-
-            // For debugging/logging if needed, but not required for every instruction for performance
-            // cout << "[Core-" << id_ << "] Executed instruction " << executed << " for " << p->getName() << endl;
         }
         if (p->isFinished()) {
-            cout << "[Core-" << id_ << "] Process " << p->getName() << " finished under FCFS." << endl;
+            // cout << "[Core-" << id_ << "] Process " << p->getName() << " finished under FCFS." << endl; // Removed for clean console
             if (scheduler != nullptr) {
                 scheduler->notifyProcessFinished(); // Notify scheduler process is done
             }
         }
     }
     else { // Round Robin Mode
-        cout << "[Core-" << id_ << "] Round Robin Mode: Running process " << p->getName()
-            << " for quantum " << quantum << " instructions." << endl;
+        // cout << "[Core-" << id_ << "] Round Robin Mode: Running process " << p->getName() // Removed for clean console
+        //     << " for quantum " << quantum << " instructions." << endl;
         while (executed < quantum && !p->isFinished()) {
             // Check if process has gone to sleep
             if (p->isSleeping()) {
-                cout << "[Core-" << id_ << "] Process " << p->getName() << " entered SLEEP state. Yielding CPU." << endl;
+                // cout << "[Core-" << id_ << "] Process " << p->getName() << " entered SLEEP state. Yielding CPU." << endl; // Removed for clean console
                 if (scheduler != nullptr) {
                     scheduler->requeueProcess(p); // Scheduler will move it to sleeping processes
                 }
@@ -93,20 +90,17 @@ void Core::workerLoop(shared_ptr<Process> p, uint64_t quantum) {
                 // Busy-wait or yield thread time
                 std::this_thread::yield();
             }
-
-            // For debugging/logging if needed
-            // cout << "[Core-" << id_ << "] Executed instruction " << executed << " for " << p->getName() << endl;
         }
 
         if (p->isFinished()) {
-            cout << "[Core-" << id_ << "] Process " << p->getName() << " finished under Round Robin." << endl;
+            // cout << "[Core-" << id_ << "] Process " << p->getName() << " finished under Round Robin." << endl; // Removed for clean console
             if (scheduler != nullptr) {
                 scheduler->notifyProcessFinished(); // Notify scheduler process is done
             }
         }
         else if (executed >= quantum) { // Quantum expired
-            cout << "[Core-" << id_ << "] Quantum expired for process " << p->getName()
-                << ". Requeuing." << endl;
+            // cout << "[Core-" << id_ << "] Quantum expired for process " << p->getName() // Removed for clean console
+            //     << ". Requeuing." << endl;
             if (scheduler != nullptr) {
                 scheduler->requeueProcess(p);  // Notify Scheduler that process needs to go back to queue
             }
