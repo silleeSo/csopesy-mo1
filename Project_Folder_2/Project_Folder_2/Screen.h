@@ -1,8 +1,12 @@
+// Screen.h
 #pragma once
 #include <iostream>
 #include <memory>
 #include <string>
+#include <vector> // For logs
+#include <unordered_map> // For variables
 #include "Process.h"
+#include "GlobalState.h" // For globalCpuTicks in process-smi display
 using namespace std;
 /*
     SCREEN OVERVIEW
@@ -19,7 +23,7 @@ public:
         clearScreen();
         string line;
         while (true) {
-            cout << "Enter a command: ";
+            cout << process->getName() << ":> "; // Show process name in prompt
             if (!getline(cin, line)) break;
             if (line == "exit") break;
             handleCommand(line);
@@ -31,30 +35,27 @@ private:
     shared_ptr<Process> process;
 
     // ----- helpers -----
-    
-
-    string processTag() const {
-        //TODO: PROCESS NAME 
-        return "proc";
-    }
 
     void clearScreen() {
-        #ifdef _WIN32
-                system("cls");
-        #else
-                system("clear");
-        #endif
-        cout << "--- Process Screen --- (type 'exit' to leave)\n";
+#ifdef _WIN32
+        system("cls");
+#else
+        system("clear");
+#endif
+        cout << "--- Process Screen for " << process->getName() << " (PID: " << process->getPid() << ") --- (type 'exit' to leave)\n";
+        cout << "Current Global CPU Tick: " << globalCpuTicks.load() << "\n\n";
     }
 
 
     void handleCommand(const string& cmd) {
+        clearScreen(); // Clear screen on each command to refresh view
+
         if (cmd == "process-smi") {
             if (process) {
-                cout << "[stub] process-smi info here\n"; // replace with real data
+                cout << process->smi() << endl; // Use the detailed smi method from Process
             }
             else {
-                cout << "Demo process – no info available.\n";
+                cout << "Error: No process attached to this screen.\n";
             }
         }
         else {
