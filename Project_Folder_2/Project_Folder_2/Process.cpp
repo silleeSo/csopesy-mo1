@@ -24,6 +24,7 @@ Process::Process(int pid, string name)
 }
 
 void Process::execute(const Instruction& ins) {
+    cout << "executing instruction" << endl;
     
     auto getValue = [this](const string& token) -> uint16_t {
         if (isdigit(token[0]) || (token[0] == '-' && token.size() > 1)) {
@@ -44,6 +45,7 @@ void Process::execute(const Instruction& ins) {
         const string& var = ins.args[0];
         uint16_t value = ins.args.size() == 2 ? clamp(getValue(ins.args[1])) : 0;
         vars[var] = value;
+        cout << "declaring" << endl;
     }
 
     else if (ins.opcode == 2 && ins.args.size() == 3) { // ADD(var1, var2/value, var3/value)
@@ -51,6 +53,7 @@ void Process::execute(const Instruction& ins) {
         uint16_t a = getValue(ins.args[1]);
         uint16_t b = getValue(ins.args[2]);
         vars[dest] = clamp(static_cast<int64_t>(a) + b);
+        cout << "add" << endl;
     }
 
     else if (ins.opcode == 3 && ins.args.size() == 3) { // SUBTRACT(var1, var2/value, var3/value)
@@ -58,6 +61,7 @@ void Process::execute(const Instruction& ins) {
         uint16_t a = getValue(ins.args[1]);
         uint16_t b = getValue(ins.args[2]);
         vars[dest] = clamp(static_cast<int64_t>(a) - b);
+        cout << "sub" << endl;
     }
 
     else if (ins.opcode == 4) { // PRINT (msg)
@@ -83,9 +87,11 @@ void Process::execute(const Instruction& ins) {
     else if (ins.opcode == 5 && ins.args.size() == 1) { // SLEEP(X)
         uint8_t ticks = static_cast<uint8_t>(getValue(ins.args[0]));
         this_thread::sleep_for(chrono::milliseconds(10 * ticks)); // Simulate CPU tick sleep
+        cout << "sleep" << endl;
     }
 
     else if (ins.opcode == 6 && ins.args.size() == 1) { // FOR(repeats)
+        cout << "for loop" << endl;
         uint16_t repeatCount = getValue(ins.args[0]);
 
         if (loopStack.size() >= 3) {
