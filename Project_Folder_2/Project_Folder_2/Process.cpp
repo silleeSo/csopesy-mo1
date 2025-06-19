@@ -1,5 +1,5 @@
 ﻿// Process.cpp
-#include <iostream>
+#include <iostream> // Keep for debug if needed, but remove for final
 #include <thread>
 #include <chrono>
 #include <climits>
@@ -83,65 +83,45 @@ void Process::execute(const Instruction& ins) {
             }
         }
         logs_.push_back(output); // Store the log message
-        // std::cout << "[Process-" << name_ << "] " << output << std::endl; // For immediate console output, optional (Removed)
     }
 
     else if (ins.opcode == 5 && ins.args.size() == 1) { // SLEEP(X)
         uint8_t ticks = static_cast<uint8_t>(getValue(ins.args[0]));
-        // Set sleep state and target tick
         isSleeping_ = true;
         sleepTargetTick_ = globalCpuTicks.load() + ticks;
-        // std::cout << "[Process-" << name_ << "] Entering sleep for " << (int)ticks << " ticks. Target: " << sleepTargetTick_ << std::endl; // Removed for clean console
     }
 
     else if (ins.opcode == 6 && ins.args.size() == 1) { // FOR(repeats)
         uint16_t repeatCount = getValue(ins.args[0]);
 
-        // The depth check and skipping logic was moved to genRandInst,
-        // but this check for loopStack.size() >= 3 *should* ideally not be hit
-        // if generation is correct. Still, keep for robustness.
+        // This check is a fallback. Generation should prevent this.
         if (loopStack.size() >= 3) {
-            logs_.push_back("[Error] Maximum FOR nesting exceeded during execution. Skipping FOR block.");
-            // To properly skip the block, we need to find the matching END
-            size_t nestedDepth = 1;
-            size_t tempInsCount = insCount_; // Use temp to search
-            while (tempInsCount + 1 < insList.size()) {
-                tempInsCount++;
-                if (insList[tempInsCount].opcode == 6) { // Nested FOR
-                    nestedDepth++;
-                }
-                else if (insList[tempInsCount].opcode == 7) { // END
-                    nestedDepth--;
-                    if (nestedDepth == 0) { // Found matching END for the current FOR
-                        insCount_ = tempInsCount; // Jump instruction pointer past this END
-                        return; // Exit execute; runOneInstruction will increment past this END.
-                    }
-                }
-            }
-            // If END not found for some reason (malformed instruction list), proceed to next instruction
+            logs_.push_back("[Error] Maximum FOR nesting exceeded during execution. Skipping this FOR instruction.");
+            // To prevent immediate re-hit, advance program counter past this FOR.
+            // runOneInstruction will handle the increment, so just return here.
             return;
         }
 
-        // Save loop state: current instruction index AFTER FOR (so insCount_++ will point to first instruction inside loop)
-        LoopState loop = { insCount_ + 1, repeatCount };
+        LoopState loop = { insCount_ + 1, repeatCount }; // Start after this FOR instruction
         loopStack.push_back(loop);
     }
     else if (ins.opcode == 7) { // END
         if (!loopStack.empty()) {
-            LoopState& currentLoop = loopStack.back(); // Use reference to modify
+            LoopState& currentLoop = loopStack.back();
             currentLoop.repeats--;
 
             if (currentLoop.repeats > 0) {
-                // Jump back to FOR position (which is stored as the instruction *after* the FOR)
-                insCount_ = currentLoop.startIns - 1; // -1 because runOneInstruction will increment it
+                insCount_ = currentLoop.startIns - 1; // Jump back to before the first instruction of the loop block
             }
             else {
-                // Finished loop, pop from stack
-                loopStack.pop_back();
+                loopStack.pop_back(); // Loop finished, remove from stack
             }
         }
         else {
-            logs_.push_back("[Error] END without matching FOR!");
+            logs_.push_back("[Error] END without matching FOR! This indicates a program generation error.");
+            // If END without matching FOR is hit, it implies a corrupted program structure.
+            // To prevent infinite loops here, we MUST ensure insCount_ advances.
+            // The default increment in runOneInstruction will handle this.
         }
     }
 }
@@ -151,7 +131,7 @@ void Process::genRandInst(uint64_t min_ins, uint64_t max_ins) {
     insList.clear();
     logs_.clear(); // Clear logs for new process generation
     vars.clear(); // Clear variables
-    loopStack.clear(); // Clear loop stack
+    loopStack.clear(); // Clear loop stack (important for regeneration)
     insCount_ = 0; // Reset program counter
 
     std::uniform_int_distribution<uint64_t> distInstructions(min_ins, max_ins);
@@ -164,32 +144,24 @@ void Process::genRandInst(uint64_t min_ins, uint64_t max_ins) {
     std::uniform_int_distribution<int> distSleepTicks(1, 10); // For SLEEP, at least 1 tick
     std::uniform_real_distribution<double> distProbability(0.0, 1.0); // For weighted chance in PRINT
 
-    // New weighted distribution for opcodes (reduced FOR/SLEEP frequency)
-    std::vector<int> opcode_weights = {
-        1, 1, 1, 1, // DECLARE (4 units, 20%)
-        2, 2, 2, 2, // ADD (4 units, 20%)
-        3, 3, 3, 3, // SUBTRACT (4 units, 20%)
-        4, 4, 4, 4, // PRINT (4 units, 20%)
-        5,          // SLEEP (1 unit, 5%) - significantly reduced
-        6           // FOR (1 unit, 5%) - significantly reduced
-    }; // Total units = 20
-
-    std::uniform_int_distribution<size_t> distWeightedOpcode(0, opcode_weights.size() - 1);
+    // Weighted distribution for general opcodes
+    std::vector<int> opcode_pool = { 1, 2, 3, 4, 5 }; // DECLARE, ADD, SUBTRACT, PRINT, SLEEP
+    std::uniform_int_distribution<size_t> distGeneralOp(0, opcode_pool.size() - 1);
 
     int currentDepth = 0; // Tracks logical FOR nesting depth during generation
 
-    for (uint64_t i = 0; i < totalInstructions; ++i) {
+    // Loop until we have generated enough instructions, considering FOR blocks add multiple instructions
+    uint64_t instructionsGenerated = 0;
+    while (instructionsGenerated < totalInstructions) {
         int opcode;
-        // Prioritize non-FOR opcodes if at max depth
-        if (currentDepth >= 3) {
-            // Generate only non-FOR/non-SLEEP ops to avoid excessive nesting or immediate re-sleep
-            std::uniform_int_distribution<int> distNonSpecialOpcode(1, 4); // DECLARE, ADD, SUBTRACT, PRINT
-            opcode = distNonSpecialOpcode(gen);
+
+        // Decide if we should generate a FOR, ensuring we don't exceed depth
+        if (currentDepth < 3 && distProbability(gen) < 0.15) { // 15% chance for a FOR if not at max depth
+            opcode = 6; // FOR
         }
         else {
-            // Otherwise, use the weighted distribution
-            int opcode_index = distWeightedOpcode(gen);
-            opcode = opcode_weights[opcode_index];
+            // Otherwise, pick from general ops (DECLARE, ADD, SUBTRACT, PRINT, SLEEP)
+            opcode = opcode_pool[distGeneralOp(gen)];
         }
 
         Instruction ins;
@@ -198,7 +170,7 @@ void Process::genRandInst(uint64_t min_ins, uint64_t max_ins) {
         switch (opcode) {
         case 1: { // DECLARE(var, [value])
             ins.args.push_back(varPool[distVar(gen)]);
-            if (distValue(gen) % 2 == 0) { // Randomly add a value or not
+            if (distProbability(gen) < 0.5) { // 50% chance to initialize with a value
                 ins.args.push_back(std::to_string(distValue(gen)));
             }
             break;
@@ -231,31 +203,20 @@ void Process::genRandInst(uint64_t min_ins, uint64_t max_ins) {
             std::uniform_int_distribution<int> distRepeats(1, 5);
             ins.args.push_back(std::to_string(distRepeats(gen)));  // Repeat 1–5 times
             currentDepth++;
-            break;
-        }
-        }
 
-        insList.push_back(ins);
+            insList.push_back(ins); // Add FOR instruction
 
-        // If a FOR instruction was just added, add some inner instructions and an END
-        if (opcode == 6) {
+            // Generate inner instructions for the FOR loop
             std::uniform_int_distribution<int> distInnerBlockSize(1, 5); // 1 to 5 instructions inside loop
             int innerBlockSize = distInnerBlockSize(gen);
 
             for (int j = 0; j < innerBlockSize; j++) {
                 Instruction innerIns;
-                int innerOp;
-                // Use weighted distribution for inner ops too, but strictly prevent FOR inside here
-                int innerOp_index = distWeightedOpcode(gen);
-                innerOp = opcode_weights[innerOp_index];
-                while (innerOp == 6) { // Ensure inner loop does not generate FOR, to control depth
-                    innerOp_index = distWeightedOpcode(gen);
-                    innerOp = opcode_weights[innerOp_index];
-                }
+                // Generate only computational/print/sleep ops inside FOR
+                int innerOp_idx = distGeneralOp(gen);
+                innerIns.opcode = opcode_pool[innerOp_idx];
 
-                innerIns.opcode = innerOp;
-
-                switch (innerOp) {
+                switch (innerIns.opcode) {
                 case 1:
                     innerIns.args.push_back(varPool[distVar(gen)]);
                     innerIns.args.push_back(std::to_string(distValue(gen)));
@@ -265,7 +226,7 @@ void Process::genRandInst(uint64_t min_ins, uint64_t max_ins) {
                     innerIns.args.push_back(varPool[distVar(gen)]);
                     innerIns.args.push_back(std::to_string(distSmallValue(gen)));
                     break;
-                case 3: // FIX: Corrected this line from previous version
+                case 3:
                     innerIns.args.push_back(varPool[distVar(gen)]);
                     innerIns.args.push_back(varPool[distVar(gen)]);
                     innerIns.args.push_back(std::to_string(distSmallValue(gen)));
@@ -290,7 +251,22 @@ void Process::genRandInst(uint64_t min_ins, uint64_t max_ins) {
             endIns.opcode = 7;  // END
             insList.push_back(endIns);
             currentDepth--;
+            instructionsGenerated += (1 + innerBlockSize + 1); // FOR + inner + END
+            continue; // Continue to next iteration of while loop to track total instructions
         }
+        } // End of switch(opcode)
+
+        insList.push_back(ins);
+        instructionsGenerated++;
+    } // End of while(instructionsGenerated < totalInstructions)
+
+    // Final cleanup: If any FOR loops were opened but not closed (shouldn't happen with this logic), close them.
+    // This is a safety fallback for generation, not a common path if logic is sound.
+    while (currentDepth > 0) {
+        Instruction endIns;
+        endIns.opcode = 7;
+        insList.push_back(endIns);
+        currentDepth--;
     }
 }
 
@@ -305,7 +281,6 @@ bool Process::runOneInstruction() {
         if (globalCpuTicks.load() >= sleepTargetTick_) {
             isSleeping_ = false;
             sleepTargetTick_ = 0;
-            // std::cout << "[Process-" << name_ << "] Woke up from sleep." << std::endl; // Removed for clean console
         }
         else {
             // Still sleeping, do not execute instruction
@@ -318,33 +293,25 @@ bool Process::runOneInstruction() {
         return false;
     }
 
-    // Capture the instruction opcode before execution to decide on insCount_ increment
-    uint8_t currentOpcode = insList[insCount_].opcode;
-    bool wasSleepingBeforeExecution = isSleeping_; // Capture state before execute()
+    // Store the instruction index before execution, as execute() might change insCount_ for FOR/END jumps.
+    size_t initialInsCount = insCount_;
+    bool wasSleepingBeforeExecute = isSleeping_; // Capture state before execute
 
+    // Execute the current instruction
     execute(insList[insCount_]);
 
-    // Decide how to advance insCount_ based on the executed instruction and process state
-    if (currentOpcode == 5) { // If the instruction executed was a SLEEP
-        // If it successfully put the process to sleep OR it failed (but still consumed the instruction slot)
-        insCount_++; // Always advance past the SLEEP instruction
+    // Only advance insCount_ if execute() did NOT handle the pointer itself (FOR/END jumps)
+    // AND if the process is NOT newly sleeping (handled by Core re-queueing and this method returning false next tick)
+    if (insCount_ == initialInsCount) { // If execute did not explicitly change insCount_
+        if (!isSleeping_) { // If the instruction didn't make the process sleep
+            insCount_++; // Advance for normal instructions (DECLARE, ADD, SUBTRACT, PRINT)
+        }
+        else if (insList[initialInsCount].opcode == 5) { // If it was a SLEEP instruction and it made the process sleep
+            insCount_++; // Always advance past the SLEEP instruction
+        }
+        // If insCount_ is initialInsCount and isSleeping_ is true, AND it's not a SLEEP opcode,
+        // it means something unexpected set isSleeping_ or a bug exists. This should ideally not be hit.
     }
-    else if (currentOpcode == 6) { // If it was a FOR instruction
-        // insCount_ is already set by the FOR logic in execute() (to startIns - 1)
-        // and will be incremented by runOneInstruction's general increment if it falls through.
-        // It's handled by the specific FOR/END logic that manipulates insCount_
-        // No general increment here as it's directly manipulated in execute for loop jumps.
-    }
-    else if (currentOpcode == 7) { // If it was an END instruction
-        // insCount_ is handled by the END logic in execute().
-        // If loop finished, it advances past END.
-        // If loop repeated, it sets to startIns - 1.
-        // No general increment here as it's directly manipulated in execute for loop jumps.
-    }
-    else { // For all other instructions (DECLARE, ADD, SUBTRACT, PRINT)
-        insCount_++;
-    }
-
 
     // Check again if process finished after instruction execution
     if (insCount_ >= insList.size()) {
