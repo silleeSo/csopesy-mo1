@@ -1,9 +1,13 @@
+// Screen.h
 #pragma once
 #include <iostream>
 #include <memory>
 #include <string>
-#include "Process.h";
-using namespace std;
+#include <vector> // For logs
+#include <unordered_map> // For variables
+#include "Process.h"
+#include "GlobalState.h" // For globalCpuTicks in process-smi display
+// Removed using namespace std; to be explicit
 /*
     SCREEN OVERVIEW
     - wraps process basically
@@ -12,53 +16,50 @@ using namespace std;
 
 class Screen {
 public:
-    Screen(shared_ptr<Process> proc) : process{ proc } {}
+    Screen(std::shared_ptr<Process> proc) : process{ proc } {}
 
     // Enters the process screen loop.
     void run() {
         clearScreen();
-        string line;
+        std::string line;
         while (true) {
-            cout << "Enter a command: ";
-            if (!getline(cin, line)) break;
+            std::cout << process->getName() << ":> "; // Show process name in prompt
+            if (!std::getline(std::cin, line)) break;
             if (line == "exit") break;
             handleCommand(line);
         }
-        cout << "Returning to main menu...\n";
+        std::cout << "Returning to main menu...\n";
     }
 
 private:
-    shared_ptr<Process> process;
+    std::shared_ptr<Process> process;
 
     // ----- helpers -----
-    
-
-    string processTag() const {
-        //TODO: PROCESS NAME 
-        return "proc";
-    }
 
     void clearScreen() {
-        #ifdef _WIN32
-                system("cls");
-        #else
-                system("clear");
-        #endif
-        cout << "--- Process Screen --- (type 'exit' to leave)\n";
+#ifdef _WIN32
+        system("cls");
+#else
+        system("clear");
+#endif
+        std::cout << "--- Process Screen for " << process->getName() << " (PID: " << process->getPid() << ") --- (type 'exit' to leave)\n";
+        std::cout << "Current Global CPU Tick: " << globalCpuTicks.load() << "\n\n";
     }
 
 
-    void handleCommand(const string& cmd) {
+    void handleCommand(const std::string& cmd) {
+        clearScreen(); // Clear screen on each command to refresh view
+
         if (cmd == "process-smi") {
             if (process) {
-                cout << "[stub] process-smi info here\n"; // replace with real data
+                std::cout << process->smi() << std::endl; // Use the detailed smi method from Process
             }
             else {
-                cout << "Demo process – no info available.\n";
+                std::cout << "Error: No process attached to this screen.\n";
             }
         }
         else {
-            cout << "Unknown screen command.\n";
+            std::cout << "Unknown screen command.\n";
         }
     }
 };

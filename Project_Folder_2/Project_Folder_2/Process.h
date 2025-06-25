@@ -4,74 +4,54 @@
 #include <unordered_map>
 #include <memory>
 #include <cstdint>
-using namespace std;
-/*
-* PROCESS CLASS OVERVIEW
-*
-    - should have basic process info (stuff that will appear on process-smi, screen -ls)
-    - should have list of instruction
-    - process purel data structure, core running functions
-
-*/
 
 class Process {
 public:
     struct Instruction {
-        uint8_t opcode;            // numeric command ID
-        vector<string> args;       // raw arguments
+        uint8_t opcode = 0;
+        std::vector<std::string> args;
     };
 
     struct LoopState {
-        size_t startIns;   // Index of FOR instruction in insList
+        size_t startIns;
         uint16_t repeats;
     };
 
-    //  Constructor / basic getters
+    Process(int pid, std::string name);
 
-    Process(int pid, string name);
-
-    int getPid() const {
-        return pid_;
-    }
-    const string& getName() const {
-        return name_;
-    }
-    bool isFinished() const {
-        return finished;
-    }
-
-    //  process‑smi helper → returns one‑liner status for Screen
-    string smi() const {
-        // TODO: return formatted string with pid, name, pc, etc.
-        return "[smi stub]";
+    int getPid() const { return pid_; }
+    const std::string& getName() const { return name_; }
+    bool isFinished() const { return finished_; }
+    bool isSleeping() const { return isSleeping_; }
+    uint64_t getSleepTargetTick() const { return sleepTargetTick_; }
+    size_t getCurrentInstructionIndex() const { return insCount_; }
+    size_t getTotalInstructions() const { return insList.size(); }
+    const std::vector<std::pair<time_t, std::string>>& getLogs() const {
+        return logs_;
     }
 
-    void execute(const Instruction& ins);
-    void genRandInst(vector<Instruction>& insList);
-    bool runOneInstruction();
+    const std::unordered_map<std::string, uint16_t>& getVariables() const { return vars; }
+
+    std::string smi() const;
+    void execute(const Instruction& ins, int coreId = -1);
+    void genRandInst(uint64_t min_ins, uint64_t max_ins);
+    bool runOneInstruction(int coreId = -1);
+    void setIsSleeping(bool val, uint64_t targetTick = 0) {
+        isSleeping_ = val;
+        sleepTargetTick_ = targetTick;
+    }
 
 private:
-
-    //void execute(const Instruction& ins);   // execute ONE instruction
-    //uint16_t valueOf(const string& tok);    // map lookup / literal (DO WE NEED THIS)
-
-    //  DATA (must survive pre‑emption)
     int pid_;
-    string name_;
-    bool finished;
-    vector<Instruction> insList;         // program
-    size_t insCount_ = 0;       // program counter
-    unordered_map<string, uint16_t> vars;         // DECLARE, ADD, SUB
-    std::vector<LoopState> loopStack; // loop counters are stored here
+    std::string name_;
+    bool finished_;
+    bool isSleeping_ = false;
+    uint64_t sleepTargetTick_ = 0;
 
-    
-    
-
-    
+    std::vector<Instruction> insList;
+    size_t insCount_ = 0;
+    std::unordered_map<std::string, uint16_t> vars;
+    std::vector<LoopState> loopStack;
+    std::vector<std::pair<time_t, std::string>> logs_;
 
 };
-
-
-
-
-

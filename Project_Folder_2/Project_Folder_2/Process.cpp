@@ -1,4 +1,5 @@
-﻿#include <iostream>
+﻿
+#include <iostream>
 #include <thread>
 #include <chrono>
 #include <climits>
@@ -6,231 +7,330 @@
 #include <unordered_map>
 #include <utility>
 #include <string>
+#include <random>
+#include <vector>
+#include <sstream>
+#include <ctime>
+#include <iomanip>
+#include <algorithm>
 
 #include "Process.h"
+#include "GlobalState.h"
 
-using namespace std;
+static std::random_device rd;
+static std::mt19937 gen(rd());
 
-void genRandInst(vector<Process::Instruction>& insList) {
+Process::Process(int pid, std::string name)
+    : pid_(pid), name_(std::move(name)), finished_(false), isSleeping_(false), sleepTargetTick_(0) {}
 
-}
-
-
-Process::Process(int pid, string name)
-    : pid_(pid), name_(move(name)) { /* initialise members if needed */
-    //TODO: add a function that randomizes and creates instruction list
-    finished = false;
-    genRandInst(insList);
-}
-
-void Process::execute(const Instruction& ins) {
-    
-    auto getValue = [this](const string& token) -> uint16_t {
+void Process::execute(const Instruction& ins, int coreId) {
+    auto getValue = [this](const std::string& token) -> uint16_t {
         if (isdigit(token[0]) || (token[0] == '-' && token.size() > 1)) {
-            return static_cast<uint16_t>(stoi(token));
+            try {
+                return static_cast<uint16_t>(std::stoi(token));
+            }
+            catch (const std::out_of_range&) {
+                return 0;
+            }
         }
         else {
             return vars.count(token) ? vars[token] : 0;
         }
-    };
+        };
 
     auto clamp = [](int64_t val) -> uint16_t {
         if (val < 0) return 0;
         if (val > UINT16_MAX) return UINT16_MAX;
         return static_cast<uint16_t>(val);
-    };
+        };
 
-    if (ins.opcode == 1 && ins.args.size() >= 1) { // DECLARE(var, [value])
-        const string& var = ins.args[0];
+    if (ins.opcode == 1 && ins.args.size() >= 1) {
+        const std::string& var = ins.args[0];
         uint16_t value = ins.args.size() == 2 ? clamp(getValue(ins.args[1])) : 0;
         vars[var] = value;
     }
-
-    else if (ins.opcode == 2 && ins.args.size() == 3) { // ADD(var1, var2/value, var3/value)
-        const string& dest = ins.args[0];
+    else if (ins.opcode == 2 && ins.args.size() == 3) {
+        const std::string& dest = ins.args[0];
         uint16_t a = getValue(ins.args[1]);
         uint16_t b = getValue(ins.args[2]);
-        vars[dest] = clamp(static_cast<int64_t>(a) + b);
+        vars[dest] = clamp(static_cast<int64_t>(a) + static_cast<int64_t>(b));
     }
-
-    else if (ins.opcode == 3 && ins.args.size() == 3) { // SUBTRACT(var1, var2/value, var3/value)
-        const string& dest = ins.args[0];
+    else if (ins.opcode == 3 && ins.args.size() == 3) {
+        const std::string& dest = ins.args[0];
         uint16_t a = getValue(ins.args[1]);
         uint16_t b = getValue(ins.args[2]);
-        vars[dest] = clamp(static_cast<int64_t>(a) - b);
+        vars[dest] = clamp(static_cast<int64_t>(a) - static_cast<int64_t>(b));
+    }
+    else if (ins.opcode == 4) {
+        std::string output = "Hello world from " + name_ + "!";
+
+        std::stringstream ss;
+        if (coreId >= 0) {
+            ss << "Core:" << coreId << " ";
+        }
+        ss << "\"" << output << "\"";
+
+        logs_.emplace_back(time(nullptr), ss.str());
     }
 
-    else if (ins.opcode == 4) { // PRINT (msg)
-        if (!ins.args.empty()) {
-            string output;
-
-            for (const string& token : ins.args) {
-                if (vars.count(token)) {
-                    output += to_string(vars[token]);
-                }
-                else {
-                    output += token;
-                }
-            }
-
-            cout << "[Screen-" << name_ << "] " << output << endl;
-        }
-        else {
-            cout << "Hello world from " << name_ << "!" << endl;
-        }
-    }
-
-    else if (ins.opcode == 5 && ins.args.size() == 1) { // SLEEP(X)
+    else if (ins.opcode == 5 && ins.args.size() == 1) {
         uint8_t ticks = static_cast<uint8_t>(getValue(ins.args[0]));
-        this_thread::sleep_for(chrono::milliseconds(10 * ticks)); // Simulate CPU tick sleep
+        isSleeping_ = true;
+        sleepTargetTick_ = globalCpuTicks.load() + ticks;
     }
-
     else if (ins.opcode == 6 && ins.args.size() == 1) { // FOR(repeats)
         uint16_t repeatCount = getValue(ins.args[0]);
 
+        // Clamp to prevent extremely large repeats
+        if (repeatCount > 1000) repeatCount = 1000;
+
+        // Enforce maximum nesting level
         if (loopStack.size() >= 3) {
-            cout << "[Error] Maximum FOR nesting exceeded." << endl;
+            logs_.emplace_back(time(nullptr), "[Error] Maximum FOR nesting exceeded during execution. Skipping this FOR instruction.");
             return;
         }
 
-        // Save loop state: current instruction index AFTER FOR
-        LoopState loop = { insCount_, repeatCount };
+        // Push loop state to stack
+        LoopState loop = { insCount_ + 1, repeatCount };
         loopStack.push_back(loop);
     }
+
     else if (ins.opcode == 7) { // END
         if (!loopStack.empty()) {
-            auto& loop = loopStack.back();
-            loop.repeats--;
+            LoopState& currentLoop = loopStack.back();
+            currentLoop.repeats--;
 
-            if (loop.repeats > 0) {
-                // Jump back to FOR position
-                insCount_ = loop.startIns;
+            if (currentLoop.repeats > 0) {
+                insCount_ = currentLoop.startIns - 1; // Jump back
             }
             else {
-                // Finished loop
                 loopStack.pop_back();
             }
         }
         else {
-            cout << "[Error] END without matching FOR!" << endl;
+            logs_.emplace_back(time(nullptr), "[Error] END without matching FOR! This indicates a program generation error.");
         }
     }
-
-
 }
 
-void Process::genRandInst(vector<Instruction>& insList) {
-    // Hardcoded values — later we can load these from config.txt
-    int min_ins = 1000;
-    int max_ins = 2000;
+void Process::genRandInst(uint64_t min_ins, uint64_t max_ins) {
+    insList.clear();
+    logs_.clear();
+    vars.clear();
+    loopStack.clear();
+    insCount_ = 0;
 
-    int totalInstructions = rand() % (max_ins - min_ins + 1) + min_ins;
-    vector<string> varPool = { "x", "y", "z", "a", "b", "c" };
+    std::uniform_int_distribution<uint64_t> distInstructions(min_ins, max_ins);
+    uint64_t totalInstructions = distInstructions(gen);
+
+    std::vector<std::string> varPool = { "x", "y", "z", "a", "b", "c" };
+    std::uniform_int_distribution<int> distVar(0, static_cast<int>(varPool.size()) - 1);
+    std::uniform_int_distribution<int> distValue(0, 1000);
+    std::uniform_int_distribution<int> distSmallValue(0, 100);
+    std::uniform_int_distribution<int> distSleepTicks(1, 10);
+    std::uniform_real_distribution<double> distProbability(0.0, 1.0);
+    std::vector<int> opcode_pool = { 1, 2, 3, 4, 5 };
+    std::uniform_int_distribution<int> distGeneralOp(0, static_cast<int>(opcode_pool.size()) - 1);
 
     int currentDepth = 0;
+    uint64_t instructionsGenerated = 0;
 
-    for (int i = 0; i < totalInstructions; ++i) {
-        int opcode = rand() % 6 + 1;  // Now allow opcode 1-6
+    while (instructionsGenerated < totalInstructions) {
+        int opcode;
+        bool allowFor = (currentDepth < 3);
+        if (allowFor && distProbability(gen) < 0.15) {
+            opcode = 6;  // FOR
+        }
+        else {
+            opcode = opcode_pool[distGeneralOp(gen)];
+        }
+
         Instruction ins;
         ins.opcode = opcode;
 
-        if (currentDepth >= 3) {  // Prevent nesting deeper than 3
-            if (opcode == 6) opcode = rand() % 5 + 1;
-        }
-
         switch (opcode) {
-        case 1: { // DECLARE
-            ins.args.push_back(varPool[rand() % varPool.size()]);
-            ins.args.push_back(to_string(rand() % 1000));
-            break;
-        }
-        case 2: { // ADD
-            ins.args.push_back(varPool[rand() % varPool.size()]);
-            ins.args.push_back(varPool[rand() % varPool.size()]);
-            ins.args.push_back(to_string(rand() % 100));
-            break;
-        }
-        case 3: { // SUBTRACT
-            ins.args.push_back(varPool[rand() % varPool.size()]);
-            ins.args.push_back(varPool[rand() % varPool.size()]);
-            ins.args.push_back(to_string(rand() % 100));
-            break;
-        }
-        case 4: { // PRINT
-            if (rand() % 2) {
-                ins.args.push_back("Value: ");
-                ins.args.push_back(varPool[rand() % varPool.size()]);
+        case 1:
+            ins.args.push_back(varPool[distVar(gen)]);
+            if (distProbability(gen) < 0.5) {
+                ins.args.push_back(std::to_string(distValue(gen)));
             }
             break;
-        }
-        case 5: { // SLEEP
-            ins.args.push_back(to_string(rand() % 10));
+
+        case 2:
+        case 3:
+            ins.args.push_back(varPool[distVar(gen)]);
+            ins.args.push_back(varPool[distVar(gen)]);
+            ins.args.push_back(std::to_string(distSmallValue(gen)));
             break;
-        }
-        case 6: { // FOR
-            ins.args.push_back(to_string((rand() % 5) + 1));  // Repeat 1–5 times
+
+        case 4:
+            break;
+
+        case 5:
+            ins.args.push_back(std::to_string(distSleepTicks(gen)));
+            break;
+
+        case 6: {
+            if (currentDepth >= 3) continue;
+
+            std::uniform_int_distribution<int> distRepeats(1, 5);
+            ins.args.push_back(std::to_string(distRepeats(gen)));
+            insList.push_back(ins);
             currentDepth++;
-            break;
-        }
-        }
 
-        insList.push_back(ins);
+            std::uniform_int_distribution<int> distInnerBlockSize(1, 5);
+            int blockSize = distInnerBlockSize(gen);
 
-        // Occasionally insert an END after FOR blocks
-        if (opcode == 6) {
-            // Insert random number of instructions inside FOR loop (simulate subblock)
-            int innerBlockSize = rand() % 5 + 1;
-            for (int j = 0; j < innerBlockSize; j++) {
-                Instruction innerIns;
-                int innerOp = rand() % 5 + 1;
-                innerIns.opcode = innerOp;
+            for (int i = 0; i < blockSize && instructionsGenerated < totalInstructions; ++i) {
+                Instruction body;
+                int innerOpcode;
 
-                switch (innerOp) {
+                if (currentDepth < 3 && distProbability(gen) < 0.15) {
+                    innerOpcode = 6;
+                }
+                else {
+                    innerOpcode = opcode_pool[distGeneralOp(gen)];
+                }
+
+                if (innerOpcode == 6 && currentDepth >= 3) {
+                    continue;  // Prevent nesting > 3
+                }
+
+                body.opcode = innerOpcode;
+
+                switch (innerOpcode) {
                 case 1:
-                    innerIns.args.push_back(varPool[rand() % varPool.size()]);
-                    innerIns.args.push_back(to_string(rand() % 1000));
+                    body.args.push_back(varPool[distVar(gen)]);
+                    body.args.push_back(std::to_string(distValue(gen)));
                     break;
                 case 2:
-                    innerIns.args.push_back(varPool[rand() % varPool.size()]);
-                    innerIns.args.push_back(varPool[rand() % varPool.size()]);
-                    innerIns.args.push_back(to_string(rand() % 100));
-                    break;
                 case 3:
-                    innerIns.args.push_back(varPool[rand() % varPool.size()]);
-                    innerIns.args.push_back(varPool[rand() % varPool.size()]);
-                    innerIns.args.push_back(to_string(rand() % 100));
+                    body.args.push_back(varPool[distVar(gen)]);
+                    body.args.push_back(varPool[distVar(gen)]);
+                    body.args.push_back(std::to_string(distSmallValue(gen)));
                     break;
                 case 4:
-                    innerIns.args.push_back("Inside Loop: ");
-                    innerIns.args.push_back(varPool[rand() % varPool.size()]);
                     break;
                 case 5:
-                    innerIns.args.push_back(to_string(rand() % 10));
+                    body.args.push_back(std::to_string(distSleepTicks(gen)));
                     break;
                 }
-                insList.push_back(innerIns);
+
+                insList.push_back(body);
+                instructionsGenerated++;
             }
 
-            // Close FOR block with END
             Instruction endIns;
             endIns.opcode = 7;  // END
             insList.push_back(endIns);
             currentDepth--;
+            instructionsGenerated += 2;  // FOR + END
+            continue;
+        }
+        }
+
+        insList.push_back(ins);
+        instructionsGenerated++;
+    }
+
+    // Final safety cleanup
+    while (currentDepth > 0) {
+        Instruction endIns;
+        endIns.opcode = 7;
+        insList.push_back(endIns);
+        currentDepth--;
+    }
+}
+
+
+
+bool Process::runOneInstruction(int coreId) {
+    if (finished_) return false;
+
+    if (isSleeping_) {
+        if (globalCpuTicks.load() >= sleepTargetTick_) {
+            isSleeping_ = false;
+            sleepTargetTick_ = 0;
+        }
+        else {
+            return false;
         }
     }
 
-    this->insList = insList;
-}
-
-bool Process::runOneInstruction() {
     if (insCount_ >= insList.size()) {
-        finished = true;
+        finished_ = true;
         return false;
     }
-    execute(insList[insCount_]);
 
-    // Advance instruction pointer normally, except for END handling
-    if (insList[insCount_].opcode != 7 || loopStack.empty() || loopStack.back().repeats == 0)
-        insCount_++;
+    size_t initialInsCount = insCount_;
+    execute(insList[insCount_], coreId);
 
+    if (insCount_ == initialInsCount) {
+        if (!isSleeping_ || insList[initialInsCount].opcode == 5) {
+            insCount_++;
+        }
+    }
+
+    if (insCount_ >= insList.size()) {
+        finished_ = true;
+        return false;
+    }
+
+    return true;
+}
+
+std::string Process::smi() const {
+    std::stringstream ss;
+    ss << "Process name: " << name_ << "\n";
+    ss << "ID: " << pid_ << "\n";
+
+    ss << "Logs:\n";
+    if (logs_.empty()) {
+        ss << "  (No logs yet)\n";
+    }
+    else {
+        // logs_ should be std::vector<std::pair<time_t, std::string>>
+        for (const auto& kv : logs_) {
+            time_t timestamp = kv.first;
+            const std::string& message = kv.second;
+
+            tm localtm{};
+#ifdef _WIN32
+            localtime_s(&localtm, &timestamp);
+#else
+            localtime_r(&timestamp, &localtm);
+#endif
+
+            char buf[64];
+            strftime(buf, sizeof(buf), "(%m/%d/%Y %I:%M:%S%p)", &localtm);
+
+            // Use buf directly to avoid << ambiguity
+            ss << "  " << buf << " " << message << "\n";
+        }
+    }
+
+    if (finished_) {
+        ss << "Finished!\n";
+    }
+    else if (isSleeping_) {
+        ss << "Status: Sleeping (Until tick: " << sleepTargetTick_ << ")\n";
+    }
+    else {
+        ss << "Status: Running\n";
+    }
+
+    ss << "Current instruction line: " << insCount_ << "\n";
+    ss << "Lines of code: " << insList.size() << "\n";
+
+    ss << "Variables:\n";
+    if (vars.empty()) {
+        ss << "  (No variables declared)\n";
+    }
+    else {
+        for (const auto& kv : vars) {
+            ss << "  " << kv.first << " = " << kv.second << "\n";
+        }
+    }
+
+    return ss.str();
 }
