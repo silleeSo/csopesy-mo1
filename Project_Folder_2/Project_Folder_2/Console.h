@@ -42,7 +42,7 @@ public:
         clearScreen();
         string line;
         while (true) {
-            cout << "csopesy> ";
+            cout << "root:\\> ";
             if (!getline(cin, line)) break;
             if (line == "exit") break;
             handleCommand(line);

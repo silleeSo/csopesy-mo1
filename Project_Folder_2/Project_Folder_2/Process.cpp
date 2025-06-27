@@ -86,7 +86,7 @@ void Process::execute(const Instruction& ins, int coreId) {
 
         // Enforce maximum nesting level
         if (loopStack.size() >= 3) {
-            logs_.emplace_back(time(nullptr), "[Error] Maximum FOR nesting exceeded during execution. Skipping this FOR instruction.");
+            // logs_.emplace_back(time(nullptr), "[Error] Maximum FOR nesting exceeded during execution. Skipping this FOR instruction.");
             return;
         }
 
