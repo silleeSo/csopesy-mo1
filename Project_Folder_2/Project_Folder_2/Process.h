@@ -30,6 +30,12 @@ public:
         return logs_;
     }
 
+    void setLastCoreId(int id) { lastCoreId_ = id; }
+    int getLastCoreId() const { return lastCoreId_; }
+
+    void setFinishTime(time_t t) { finishTime_ = t; }
+    time_t getFinishTime() const { return finishTime_; }
+
     const std::unordered_map<std::string, uint16_t>& getVariables() const { return vars; }
 
     std::string smi() const;
@@ -47,7 +53,8 @@ private:
     bool finished_;
     bool isSleeping_ = false;
     uint64_t sleepTargetTick_ = 0;
-
+    int lastCoreId_ = -1;  // -1 means unassigned or unknown
+    time_t finishTime_ = 0;
     std::vector<Instruction> insList;
     size_t insCount_ = 0;
     std::unordered_map<std::string, uint16_t> vars;

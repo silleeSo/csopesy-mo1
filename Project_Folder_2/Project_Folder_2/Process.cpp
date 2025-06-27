@@ -322,7 +322,7 @@ std::string Process::smi() const {
     ss << "Current instruction line: " << insCount_ << "\n";
     ss << "Lines of code: " << insList.size() << "\n";
 
-    ss << "Variables:\n";
+    /*ss << "Variables:\n";
     if (vars.empty()) {
         ss << "  (No variables declared)\n";
     }
@@ -330,7 +330,7 @@ std::string Process::smi() const {
         for (const auto& kv : vars) {
             ss << "  " << kv.first << " = " << kv.second << "\n";
         }
-    }
+    }*/
 
     return ss.str();
 }

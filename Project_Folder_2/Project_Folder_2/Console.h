@@ -59,7 +59,7 @@ private:
         cout << "'  '--'\\.-'    |'  '-'  '|  | --' |  `---..-'    |  |  |    " << endl;
         cout << " `-----'`-----'  `-----' `--'     `------'`-----'   `--'     " << endl;
         cout << "\nWelcome to CSOPESY Emulator!" << endl;
-        cout << "Developers: Your Group Name Here" << endl; // Placeholder
+        cout << "Developers: Group 12 Ariaga, Guillarte, Llorando, So" << endl; // Placeholder
         cout << "Last updated: " << getCurrentTimestamp() << endl;
         cout << "Type 'help' to see available commands\n";
     }
@@ -203,9 +203,16 @@ private:
                         cout << "Process '" << processName << "' (PID: " << newProcess->getPid() << ") created and submitted." << endl;
                         // Attach to screen
                         activeScreen_ = make_unique<Screen>(newProcess);
-                        activeScreen_->run(); // Enter process screen loop
-                        activeScreen_.reset(); // Clear active screen after exit
-                        clearScreen(); // Clear screen after returning from process screen
+                        activeScreen_->run(); // Manually runs the process
+
+                        // ✅ After exiting the screen, check if it finished and add to finished list
+                        if (newProcess->isFinished()) {
+                            scheduler_->addFinishedProcess(newProcess);
+                        }
+
+                        activeScreen_.reset(); // Clear active screen
+                        clearScreen();         // Clear screen after returning
+
                     }
                 }
             }
@@ -263,42 +270,79 @@ private:
                     }
                 }
             }
+
             else if (trimmedLine == "screen -ls") {
-                // This will be implemented after Scheduler provides process lists and utilization
-                cout << "CPU utilization: " << fixed << setprecision(2) << scheduler_->getCpuUtilization() << "%" << endl;
-                cout << "Cores used: " << scheduler_->getCoresUsed() << endl;
-                cout << "Cores available: " << scheduler_->getCoresAvailable() << endl;
+                system("cls");
+                cout << "CPU utilization:  " << fixed << setprecision(2) << scheduler_->getCpuUtilization() << "%\n";
+                cout << "Cores used:       " << scheduler_->getCoresUsed() << '\n';
+                cout << "Cores available:  " << scheduler_->getCoresAvailable() << "\n\n";
 
-                cout << "\nRunning processes:" << endl;
-                if (scheduler_->getRunningProcesses().empty()) {
-                    cout << "  No processes currently running." << endl;
-                }
-                else {
-                    for (const auto& p : scheduler_->getRunningProcesses()) {
-                        cout << p->smi() << endl; // Use process-smi helper
+                cout << "----------------------------\n";
+                cout << "Running processes:\n";
+
+                bool anyRunning = false;
+                for (int i = 0; i < cfg_.num_cpu; ++i) {
+                    auto core = scheduler_->getCore(i);
+                    if (core && core->isBusy()) {
+                        auto p = core->getRunningProcess();
+                        if (p) {
+                            // Format timestamp
+                            time_t now = time(nullptr);
+                            tm localtm{};
+#ifdef _WIN32
+                            localtime_s(&localtm, &now);
+#else
+                            localtime_r(&now, &localtm);
+#endif
+                            char timebuf[64];
+                            strftime(timebuf, sizeof(timebuf), "%m/%d/%Y %I:%M:%S%p", &localtm);
+
+                            cout << setw(4) << left << p->getName()
+                                << " (" << timebuf << ") "
+                                << "Core:" << i << " "
+                                << p->getCurrentInstructionIndex() << " / "
+                                << p->getTotalInstructions() << "\n";
+                            anyRunning = true;
+                        }
                     }
                 }
 
-                cout << "\nSleeping processes:" << endl; // New section for sleeping processes
-                if (scheduler_->getSleepingProcesses().empty()) {
-                    cout << "  No processes currently sleeping." << endl;
+                if (!anyRunning) {
+                    cout << "  No processes currently running.\n";
+                }
+
+                cout << "\nFinished processes:\n";
+                const auto& finished = scheduler_->getFinishedProcesses();
+                if (finished.empty()) {
+                    cout << "  No processes have finished.\n";
                 }
                 else {
-                    for (const auto& p : scheduler_->getSleepingProcesses()) {
-                        cout << p->smi() << endl;
+                    for (const auto& p : finished) {
+                        time_t ft = p->getFinishTime();
+                        tm localtm{};
+#ifdef _WIN32
+                        localtime_s(&localtm, &ft);
+#else
+                        localtime_r(&ft, &localtm);
+#endif
+                        char timebuf[64];
+                        strftime(timebuf, sizeof(timebuf), "%m/%d/%Y %I:%M:%S%p", &localtm);
+
+                        cout << setw(15) << left << p->getName()
+                            << " (" << timebuf << ") "
+                            << "Finished "
+                            << p->getTotalInstructions() << " / "
+                            << p->getTotalInstructions() << "\n";
                     }
                 }
 
-                cout << "\nFinished processes:" << endl;
-                if (scheduler_->getFinishedProcesses().empty()) {
-                    cout << "  No processes have finished." << endl;
+
+                cout << "----------------------------\n";
                 }
-                else {
-                    for (const auto& p : scheduler_->getFinishedProcesses()) {
-                        cout << p->smi() << endl; // Use process-smi helper
-                    }
-                }
-            }
+
+
+
+            
             else if (trimmedLine == "scheduler-start") {
                 scheduler_->startProcessGeneration();
                 cout << "Scheduler process generation started." << endl;
@@ -318,42 +362,74 @@ private:
 
     void generateReport() {
         ofstream out("csopesy-log.txt");
-        if (!out) { cout << "Error: Cannot create csopesy-log.txt\n"; return; }
+        if (!out) {
+            cout << "Error: Cannot create csopesy-log.txt\n";
+            return;
+        }
 
         out << "CSOPESY Emulator Report - " << getCurrentTimestamp() << "\n\n";
         out << "CPU utilization: " << fixed << setprecision(2) << scheduler_->getCpuUtilization() << "%" << endl;
         out << "Cores used: " << scheduler_->getCoresUsed() << endl;
         out << "Cores available: " << scheduler_->getCoresAvailable() << endl;
 
-        out << "\nRunning processes:" << endl;
-        if (scheduler_->getRunningProcesses().empty()) {
-            out << "  No processes currently running." << endl;
+        out << "\n----------------------------\n";
+        out << "Running processes:\n";
+
+        bool anyRunning = false;
+        for (int i = 0; i < cfg_.num_cpu; ++i) {
+            auto core = scheduler_->getCore(i);
+            if (core && core->isBusy()) {
+                auto p = core->getRunningProcess();
+                if (p) {
+                    time_t now = time(nullptr);
+                    tm localtm{};
+#ifdef _WIN32
+                    localtime_s(&localtm, &now);
+#else
+                    localtime_r(&localtm, &now);
+#endif
+                    char timebuf[64];
+                    strftime(timebuf, sizeof(timebuf), "%m/%d/%Y %I:%M:%S%p", &localtm);
+
+                    out << setw(15) << left << p->getName()
+                        << " (" << timebuf << ") "
+                        << "Core:" << i << " "
+                        << p->getCurrentInstructionIndex() << " / "
+                        << p->getTotalInstructions() << "\n";
+                    anyRunning = true;
+                }
+            }
+        }
+        if (!anyRunning) {
+            out << "  No processes currently running.\n";
+        }
+
+        out << "\nFinished processes:\n";
+        const auto& finished = scheduler_->getFinishedProcesses();
+        if (finished.empty()) {
+            out << "  No processes have finished.\n";
         }
         else {
-            for (const auto& p : scheduler_->getRunningProcesses()) {
-                out << p->smi() << endl;
+            for (const auto& p : finished) {
+                time_t ft = p->getFinishTime();
+                tm localtm{};
+#ifdef _WIN32
+                localtime_s(&localtm, &ft);
+#else
+                localtime_r(&localtm, &ft);
+#endif
+                char timebuf[64];
+                strftime(timebuf, sizeof(timebuf), "%m/%d/%Y %I:%M:%S%p", &localtm);
+
+                out << setw(15) << left << p->getName()
+                    << " (" << timebuf << ") "
+                    << "Finished "
+                    << p->getTotalInstructions() << " / "
+                    << p->getTotalInstructions() << "\n";
             }
         }
 
-        out << "\nSleeping processes:" << endl; // New section for sleeping processes in report
-        if (scheduler_->getSleepingProcesses().empty()) {
-            out << "  No processes currently sleeping." << endl;
-        }
-        else {
-            for (const auto& p : scheduler_->getSleepingProcesses()) {
-                out << p->smi() << endl;
-            }
-        }
-
-        out << "\nFinished processes:" << endl;
-        if (scheduler_->getFinishedProcesses().empty()) {
-            out << "  No processes have finished." << endl;
-        }
-        else {
-            for (const auto& p : scheduler_->getFinishedProcesses()) {
-                out << p->smi() << endl;
-            }
-        }
+        out << "----------------------------\n";
         cout << "Report written to csopesy-log.txt\n";
     }
 
