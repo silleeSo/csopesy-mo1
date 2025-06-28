@@ -23,6 +23,7 @@ static std::mt19937 gen(rd());
 Process::Process(int pid, std::string name)
     : pid_(pid), name_(std::move(name)), finished_(false), isSleeping_(false), sleepTargetTick_(0) {}
 
+
 void Process::execute(const Instruction& ins, int coreId) {
     auto getValue = [this](const std::string& token) -> uint16_t {
         if (isdigit(token[0]) || (token[0] == '-' && token.size() > 1)) {
@@ -48,17 +49,21 @@ void Process::execute(const Instruction& ins, int coreId) {
         const std::string& var = ins.args[0];
         uint16_t value = ins.args.size() == 2 ? clamp(getValue(ins.args[1])) : 0;
         vars[var] = value;
+        cout << "declaring" << endl;
     }
     else if (ins.opcode == 2 && ins.args.size() == 3) {
         const std::string& dest = ins.args[0];
         uint16_t a = getValue(ins.args[1]);
         uint16_t b = getValue(ins.args[2]);
+
         vars[dest] = clamp(static_cast<int64_t>(a) + static_cast<int64_t>(b));
+
     }
     else if (ins.opcode == 3 && ins.args.size() == 3) {
         const std::string& dest = ins.args[0];
         uint16_t a = getValue(ins.args[1]);
         uint16_t b = getValue(ins.args[2]);
+
         vars[dest] = clamp(static_cast<int64_t>(a) - static_cast<int64_t>(b));
     }
     else if (ins.opcode == 4) {
@@ -75,10 +80,13 @@ void Process::execute(const Instruction& ins, int coreId) {
 
     else if (ins.opcode == 5 && ins.args.size() == 1) {
         uint8_t ticks = static_cast<uint8_t>(getValue(ins.args[0]));
+
         isSleeping_ = true;
         sleepTargetTick_ = globalCpuTicks.load() + ticks;
+
     }
     else if (ins.opcode == 6 && ins.args.size() == 1) { // FOR(repeats)
+        cout << "for loop" << endl;
         uint16_t repeatCount = getValue(ins.args[0]);
 
         // Clamp to prevent extremely large repeats
