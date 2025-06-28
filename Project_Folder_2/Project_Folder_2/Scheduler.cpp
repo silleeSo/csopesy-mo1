@@ -111,13 +111,15 @@ double Scheduler::getCpuUtilization() const {
     uint64_t currentSystemTicks = globalCpuTicks.load() - schedulerStartTime_.load();
     if (currentSystemTicks == 0 || numCpus_ == 0) return 0.0;
 
-    uint64_t busyTicks = 0;
+    double busyTicks = 0.0;
     for (const auto& ticks : coreTicksUsed_) {
-        busyTicks += ticks->load();
+        busyTicks += static_cast<double>(ticks->load());
     }
 
-    return std::min(100.0, (static_cast<double>(busyTicks) / (currentSystemTicks * numCpus_)) * 100.0);
+    double utilization = (busyTicks / static_cast<double>(std::max(globalCpuTicks.load(), 1ULL) * numCpus_)) * 100.0;
+    return std::min(100.0, utilization);
 }
+
 
 int Scheduler::getCoresUsed() const {
     return static_cast<int>(std::count_if(cores_.begin(), cores_.end(), [](const auto& core) {

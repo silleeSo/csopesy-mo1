@@ -1,4 +1,4 @@
-#include "Core.h"
+﻿#include "Core.h"
 #include "Scheduler.h"
 #include "GlobalState.h"
 #include <iostream>
@@ -42,7 +42,6 @@ bool Core::tryAssign(std::shared_ptr<Process> p, uint64_t quantum) {
 
 void Core::workerLoop(std::shared_ptr<Process> p, uint64_t quantum) {
     uint64_t executed = 0;
-    uint64_t startTicks = globalCpuTicks.load();
 
     while (!p->isFinished() && executed < quantum) {
         if (p->isSleeping()) {
@@ -53,10 +52,15 @@ void Core::workerLoop(std::shared_ptr<Process> p, uint64_t quantum) {
         bool ran = p->runOneInstruction(id_);
         if (!ran) break;
 
+        // Tick only if instruction was executed
+        globalCpuTicks.fetch_add(1);
+        scheduler->updateCoreUtilization(id_, 1);  // 1 tick of busy CPU time
+
         executed++;
 
+        // Apply short artificial delay for debug visibility
         if (delayPerExec_ == 0) {
-            std::this_thread::yield();
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
         else {
             uint64_t targetTick = globalCpuTicks.load() + delayPerExec_;
@@ -66,16 +70,12 @@ void Core::workerLoop(std::shared_ptr<Process> p, uint64_t quantum) {
         }
     }
 
+    //  Moved outside of the delay block
     if (p->isFinished()) {
-        if (scheduler) scheduler->notifyProcessFinished();
+        if (scheduler) scheduler->addFinishedProcess(p);
     }
     else if (executed >= quantum) {
         if (scheduler) scheduler->requeueProcess(p);
-    }
-
-    if (scheduler) {
-        uint64_t endTicks = globalCpuTicks.load();
-        scheduler->updateCoreUtilization(id_, endTicks - startTicks);
     }
 
     busy_ = false;

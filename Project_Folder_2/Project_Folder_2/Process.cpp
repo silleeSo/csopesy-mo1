@@ -77,6 +77,7 @@ void Process::execute(const Instruction& ins, int coreId) {
         uint8_t ticks = static_cast<uint8_t>(getValue(ins.args[0]));
         isSleeping_ = true;
         sleepTargetTick_ = globalCpuTicks.load() + ticks;
+        insCount_++;
     }
     else if (ins.opcode == 6 && ins.args.size() == 1) { // FOR(repeats)
         uint16_t repeatCount = getValue(ins.args[0]);
@@ -253,7 +254,7 @@ bool Process::runOneInstruction(int coreId) {
             sleepTargetTick_ = 0;
         }
         else {
-            return false;
+            return false;  // still sleeping
         }
     }
 
@@ -262,13 +263,10 @@ bool Process::runOneInstruction(int coreId) {
         return false;
     }
 
-    size_t initialInsCount = insCount_;
     execute(insList[insCount_], coreId);
 
-    if (insCount_ == initialInsCount) {
-        if (!isSleeping_ || insList[initialInsCount].opcode == 5) {
-            insCount_++;
-        }
+    if (!isSleeping_) {
+        insCount_++;
     }
 
     if (insCount_ >= insList.size()) {
@@ -278,6 +276,8 @@ bool Process::runOneInstruction(int coreId) {
 
     return true;
 }
+
+
 
 std::string Process::smi() const {
     std::stringstream ss;

@@ -42,6 +42,7 @@ public:
     int getCoresUsed() const;
     int getCoresAvailable() const;
 
+
     void updateCoreUtilization(int coreId, uint64_t ticksUsed);
     Core* getCore(int index) const;
 
