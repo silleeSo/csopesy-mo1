@@ -1,4 +1,4 @@
-// Scheduler.h
+
 #pragma once
 #include <vector>
 #include <string>
@@ -7,12 +7,12 @@
 #include <mutex>
 #include <atomic>
 #include <condition_variable>
-#include <algorithm> // For std::remove_if
+#include <unordered_set> 
 
 #include "Core.h"
 #include "Process.h"
-#include "ThreadedQueue.h" // For TSQueue
-#include "GlobalState.h" // For globalCpuTicks
+#include "ThreadedQueue.h"
+#include "GlobalState.h"
 
 class Scheduler {
 public:
@@ -21,38 +21,36 @@ public:
         uint64_t delay_per_exec);
     ~Scheduler();
 
-    void start(); // Start the main scheduler loop
-    void stop();  // Stop the main scheduler loop and wait for processes to finish
+    void start();
+    void stop();
+    void submit(std::shared_ptr<Process> p);
+    void notifyProcessFinished();
+    void requeueProcess(std::shared_ptr<Process> p);
+    void startProcessGeneration();
+    void stopProcessGeneration();
+    void waitUntilAllDone();
 
-    void submit(std::shared_ptr<Process> p); // Submit a new process to the ready queue
+    void addFinishedProcess(std::shared_ptr<Process> p);
 
-    void notifyProcessFinished(); // Called by Core when a process finishes
-    void requeueProcess(std::shared_ptr<Process> p); // Called by Core when quantum expires or process sleeps
+    int getNextProcessId();
 
-    void startProcessGeneration(); // Begin automatic process generation
-    void stopProcessGeneration();  // Stop automatic process generation
-
-    void waitUntilAllDone(); // Blocks until all active processes are finished
-
-    int getNextProcessId(); // Generates a unique PID
-
-    // Getters for Console to display status
     std::vector<std::shared_ptr<Process>> getRunningProcesses() const;
     std::vector<std::shared_ptr<Process>> getFinishedProcesses() const;
-    std::vector<std::shared_ptr<Process>> getSleepingProcesses() const; // New getter for sleeping processes
+    std::vector<std::shared_ptr<Process>> getSleepingProcesses() const;
 
     double getCpuUtilization() const;
     int getCoresUsed() const;
     int getCoresAvailable() const;
 
-    // Called by Core to update its utilization metric
     void updateCoreUtilization(int coreId, uint64_t ticksUsed);
+    Core* getCore(int index) const;
 
 private:
-    void schedulerLoop(); // Main scheduling thread logic
-    void processGeneratorLoop(); // Thread for generating new processes
+    void schedulerLoop();
+    void processGeneratorLoop();
 
     int numCpus_;
+    int nextCoreIndex_ = 0;
     std::string schedulerType_;
     uint64_t quantumCycles_;
     uint64_t batchProcessFreq_;
@@ -60,32 +58,30 @@ private:
     uint64_t maxInstructions_;
     uint64_t delayPerExec_;
 
-    std::vector<std::unique_ptr<Core>> cores_; // CPU cores
+    std::vector<std::unique_ptr<Core>> cores_;
+    TSQueue<std::shared_ptr<Process>> readyQueue_;
 
-    TSQueue<std::shared_ptr<Process>> readyQueue_; // Processes ready to run
-
-    // Vectors for tracking process states, protected by mutexes for concurrent access
-    mutable std::mutex runningProcessesMutex_; // Mutable to allow const methods to lock
-    std::vector<std::shared_ptr<Process>> runningProcesses_; // Processes currently assigned to cores
+    mutable std::mutex runningProcessesMutex_;
+    std::vector<std::shared_ptr<Process>> runningProcesses_;
 
     mutable std::mutex finishedProcessesMutex_;
-    std::vector<std::shared_ptr<Process>> finishedProcesses_; // Completed processes
+    std::vector<std::shared_ptr<Process>> finishedProcesses_;
+    std::unordered_set<int> finishedPIDs_;
 
     mutable std::mutex sleepingProcessesMutex_;
-    std::vector<std::shared_ptr<Process>> sleepingProcesses_; // Processes currently sleeping
+    std::vector<std::shared_ptr<Process>> sleepingProcesses_;
 
     std::thread schedulerThread_;
-    std::atomic<bool> running_; // Flag to control schedulerLoop
+    std::atomic<bool> running_ = false;
 
     std::thread processGenThread_;
-    std::atomic<bool> processGenEnabled_; // Flag to control processGeneratorLoop
-    std::atomic<uint64_t> lastProcessGenTick_; // Track last generation time
+    std::atomic<bool> processGenEnabled_ = false;
+    std::atomic<uint64_t> lastProcessGenTick_ = 0;
 
-    std::atomic<int> nextPid_; // For generating unique Process IDs
-    std::atomic<int> activeProcessesCount_; // Count of processes that are running or in queue/sleeping
+    std::atomic<int> nextPid_ = 1;
+    std::atomic<int> activeProcessesCount_ = 0;
 
-    // For CPU Utilization calculation
-    std::vector<std::unique_ptr<std::atomic<uint64_t>>> coreTicksUsed_; // Tracks ticks each core has been busy
-    std::atomic<uint64_t> totalSystemTicks_; // Total ticks the system has been running since scheduler start
-    std::atomic<uint64_t> schedulerStartTime_; // Global CPU tick when scheduler started
+    std::vector<std::unique_ptr<std::atomic<uint64_t>>> coreTicksUsed_;
+    std::atomic<uint64_t> schedulerStartTime_ = 0;
 };
+
