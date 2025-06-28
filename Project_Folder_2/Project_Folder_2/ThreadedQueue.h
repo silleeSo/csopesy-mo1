@@ -1,3 +1,4 @@
+// ThreadedQueue.h
 // C++ implementation of the above approach
 #pragma once
 #include <condition_variable>
@@ -52,5 +53,25 @@ public:
         // return item
         return item;
     }
-};
 
+    // Non-blocking try_pop
+    bool try_pop(T& item) {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        if (m_queue.empty()) {
+            return false;
+        }
+        item = m_queue.front();
+        m_queue.pop();
+        return true;
+    }
+
+    bool empty() {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        return m_queue.empty();
+    }
+
+    size_t size() {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        return m_queue.size();
+    }
+};

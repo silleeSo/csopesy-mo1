@@ -1,4 +1,5 @@
-﻿#pragma once
+﻿// Console.h
+#pragma once
 #include <ctime>
 #include <iomanip>
 #include <iostream>
@@ -7,16 +8,21 @@
 #include <unordered_map>
 #include <cstdlib>
 #include <string>
+#include <thread> // For cpuTickThread
+#include <memory> // For unique_ptr and shared_ptr
+#include <vector>
+
 #include "Scheduler.h"
 #include "Screen.h"
 #include "Process.h"
+#include "GlobalState.h" // Include for globalCpuTicks
 
 #ifdef _WIN32
 #include <windows.h>
 #endif
 using namespace std;
 
-//CONFIG STRUCT 
+//CONFIG STRUCT
 
 struct Config {
     int          num_cpu = 1;
@@ -29,7 +35,6 @@ struct Config {
 };
 
 
-
 class Console {
 public:
     /* Entry‑point (blocking CLI loop) */
@@ -37,7 +42,7 @@ public:
         clearScreen();
         string line;
         while (true) {
-            cout << "csopesy> ";
+            cout << "root:\\> ";
             if (!getline(cin, line)) break;
             if (line == "exit") break;
             handleCommand(line);
@@ -53,7 +58,10 @@ private:
         cout << "|  |    `.  `-. |  | |  ||  '--' ||  `--, `.  `-. '.    /   " << endl;
         cout << "'  '--'\\.-'    |'  '-'  '|  | --' |  `---..-'    |  |  |    " << endl;
         cout << " `-----'`-----'  `-----' `--'     `------'`-----'   `--'     " << endl;
-        cout << "\nCommand Line Interface\nType 'help' to see available commands\n";
+        cout << "\nWelcome to CSOPESY Emulator!" << endl;
+        cout << "Developers: Group 12 Ariaga, Guillarte, Llorando, So" << endl; // Placeholder
+        cout << "Last updated: " << getCurrentTimestamp() << endl;
+        cout << "Type 'help' to see available commands\n";
     }
     void clearScreen() {
 #ifdef _WIN32
@@ -76,79 +84,356 @@ private:
         return string(buf);
     }
 
+    // New: Function to start the CPU tick thread
+    void startCpuTickThread() {
+        // Ensure only one tick thread is running
+        if (cpuTickThread.joinable()) {
+            // Already running or joined, detach it again if it was joined previously
+            cpuTickThread.detach();
+        }
+
+        cpuTickThread = std::thread([]() {
+            while (true) {
+                globalCpuTicks++;
+                // A very small sleep to prevent 100% CPU usage for the tick thread itself.
+                // The actual 'delay-per-exec' busy-waiting happens in Core.
+                std::this_thread::sleep_for(std::chrono::microseconds(1));
+            }
+            });
+        cpuTickThread.detach(); // Let it run independently
+        cout << "CPU tick thread started." << endl;
+    }
+
 
     void handleCommand(const string& line) {
         clearScreen();
-        if (line == "help") {
+        // Trim whitespace from the line for robust command parsing
+        string trimmedLine = line;
+        size_t first = trimmedLine.find_first_not_of(' ');
+        if (string::npos == first) trimmedLine.clear();
+        else trimmedLine = trimmedLine.substr(first, (trimmedLine.find_last_not_of(' ') - first + 1));
+
+
+        if (trimmedLine == "help") {
             cout << "\nAvailable commands:" << endl;
-            cout << "- initialize: initialize the specifications of the OS" << endl;
+            cout << "- initialize: Initialize the specifications of the OS (must be called first)" << endl;
             cout << "- screen -ls: Show active and finished processes" << endl;
-            cout << "- screen -s <process_name>: Create a new process" << endl;
-            cout << "- screen -r <process_name>: Attach to a process screen" << endl;
-            cout << "- scheduler-start: Start scheduler threads" << endl;
-            cout << "- scheduler-stop: Stop scheduler threads" << endl;
-            cout << "- report-util: Generate CPU utilization report" << endl;
+            cout << "- screen -s <process_name>: Create and attach to a new process screen" << endl;
+            cout << "- screen -r <process_name>: Attach to an existing process screen" << endl;
+            cout << "- scheduler-start: Start generating dummy processes and scheduling" << endl;
+            cout << "- scheduler-stop: Stop generating dummy processes" << endl;
+            cout << "- report-util: Generate CPU utilization report to file" << endl;
             cout << "- clear: Clear the screen" << endl;
             cout << "- exit: Exit the program" << endl;
-            cout << "Note: you must call initialize before any functional CLI command" << endl;
         }
 
-        else if (line == "clear") { clearScreen(); return; }
+        else if (trimmedLine == "clear") { clearScreen(); return; }
 
-        else if (line == "initialize" && initialized_ == false) {
+        else if (trimmedLine == "initialize" && initialized_ == false) {
             if (loadConfigFile("config.txt")) {
                 initialized_ = true;
                 cout << "\nLoaded configuration:\n"
                     << "  num-cpu            = " << cfg_.num_cpu << '\n'
                     << "  scheduler          = " << cfg_.scheduler << '\n'
                     << "  quantum-cycles     = " << cfg_.quantum_cycles << '\n'
-                    << "  batch-process-freq = " << cfg_.batch_process_freq << '\n'
-                    << "  min-ins            = " << cfg_.min_ins << '\n'
-                    << "  max-ins            = " << cfg_.max_ins << '\n'
-                    << "  delay-per-exec     = " << cfg_.delay_per_exec << '\n';
+                    << "  batch_process_freq = " << cfg_.batch_process_freq << '\n'
+                    << "  min_ins            = " << cfg_.min_ins << '\n'
+                    << "  max_ins            = " << cfg_.max_ins << '\n'
+                    << "  delay_per_exec     = " << cfg_.delay_per_exec << '\n';
+
+                // Initialize the scheduler after config is loaded
+                scheduler_ = make_unique<Scheduler>(cfg_.num_cpu, cfg_.scheduler, cfg_.quantum_cycles,
+                    cfg_.batch_process_freq, cfg_.min_ins, cfg_.max_ins,
+                    cfg_.delay_per_exec);
+                scheduler_->start(); // Start the scheduler's main loop
+
+                startCpuTickThread(); // Start the global CPU tick counter
             }
             else {
                 cout << "Initialization failed – check config.txt\n";
             }
-
             return;
         }
-        else {
-            if (initialized_ == true) {
-                if (line == "screen -"); //check hw specs
-                else if (line == "screen"); // check hw specs
-                else if (line == "screen"); //check
-                else if (line == "scheduler-start");
-                else if (line == "scheduler-stop");
-                else if (line == "report-util") {
-                    generateReport();
+        else if (!initialized_) {
+            cout << "Error: Specifications have not yet been initialized! Type 'initialize' first." << endl;
+        }
+        else { // Commands requiring initialization
+            if (trimmedLine.rfind("screen -s ", 0) == 0) { // Starts with "screen -s "
+                string processName = trimmedLine.substr(trimmedLine.find("screen -s ") + 10);
+                if (processName.empty()) {
+                    cout << "Usage: screen -s <process_name>" << endl;
                 }
-                else
-                    cout << "[" << getCurrentTimestamp() << "] Unknown command: " << line << '\n';
+                else {
+                    // Check if process name already exists
+                    bool nameExists = false;
+                    for (const auto& p : scheduler_->getRunningProcesses()) {
+                        if (p->getName() == processName) {
+                            nameExists = true;
+                            break;
+                        }
+                    }
+                    if (!nameExists) {
+                        for (const auto& p : scheduler_->getFinishedProcesses()) {
+                            if (p->getName() == processName) {
+                                nameExists = true;
+                                break;
+                            }
+                        }
+                    }
+                    // Also check sleeping processes
+                    if (!nameExists) {
+                        for (const auto& p : scheduler_->getSleepingProcesses()) { // Assuming a getter for sleeping processes
+                            if (p->getName() == processName) {
+                                nameExists = true;
+                                break;
+                            }
+                        }
+                    }
 
+
+                    if (nameExists) {
+                        cout << "Error: Process with name '" << processName << "' already exists." << endl;
+                    }
+                    else {
+                        // Create a new process and submit to scheduler
+                        // PID will be assigned by scheduler's internal counter or a new mechanism
+                        auto newProcess = make_shared<Process>(scheduler_->getNextProcessId(), processName);
+                        newProcess->genRandInst(cfg_.min_ins, cfg_.max_ins); // Generate instructions
+                        scheduler_->submit(newProcess);
+                        cout << "Process '" << processName << "' (PID: " << newProcess->getPid() << ") created and submitted." << endl;
+                        // Attach to screen
+                        activeScreen_ = make_unique<Screen>(newProcess);
+                        activeScreen_->run(); // Manually runs the process
+
+                        // ✅ After exiting the screen, check if it finished and add to finished list
+                        if (newProcess->isFinished()) {
+                            scheduler_->addFinishedProcess(newProcess);
+                        }
+
+                        activeScreen_.reset(); // Clear active screen
+                        clearScreen();         // Clear screen after returning
+
+                    }
+                }
+            }
+            else if (trimmedLine.rfind("screen -r ", 0) == 0) { // Starts with "screen -r "
+                string processName = trimmedLine.substr(trimmedLine.find("screen -r ") + 10);
+                if (processName.empty()) {
+                    cout << "Usage: screen -r <process_name>" << endl;
+                }
+                else {
+                    shared_ptr<Process> targetProcess = nullptr;
+                    // Check running processes
+                    for (const auto& p : scheduler_->getRunningProcesses()) {
+                        if (p->getName() == processName) {
+                            targetProcess = p;
+                            break;
+                        }
+                    }
+                    // Check finished processes if not found in running
+                    if (!targetProcess) {
+                        for (const auto& p : scheduler_->getFinishedProcesses()) {
+                            if (p->getName() == processName) {
+                                targetProcess = p;
+                                break;
+                            }
+                        }
+                    }
+                    // Check sleeping processes if not found in running or finished
+                    if (!targetProcess) {
+                        for (const auto& p : scheduler_->getSleepingProcesses()) { // Assuming a getter for sleeping processes
+                            if (p->getName() == processName) {
+                                targetProcess = p;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (targetProcess) {
+                        if (targetProcess->isFinished()) {
+                            cout << "Process '" << processName << "' has finished execution." << endl;
+                            // Still allow attaching to a finished process screen to view its final state/logs
+                            activeScreen_ = make_unique<Screen>(targetProcess);
+                            activeScreen_->run(); // Enter process screen loop
+                            activeScreen_.reset(); // Clear active screen after exit
+                            clearScreen(); // Clear screen after returning from process screen
+                        }
+                        else {
+                            activeScreen_ = make_unique<Screen>(targetProcess);
+                            activeScreen_->run(); // Enter process screen loop
+                            activeScreen_.reset(); // Clear active screen after exit
+                            clearScreen(); // Clear screen after returning from process screen
+                        }
+                    }
+                    else {
+                        cout << "Process '" << processName << "' not found." << endl;
+                    }
+                }
+            }
+
+            else if (trimmedLine == "screen -ls") {
+                system("cls");
+                cout << "CPU utilization:  " << fixed << setprecision(2) << scheduler_->getCpuUtilization() << "%\n";
+                cout << "Cores used:       " << scheduler_->getCoresUsed() << '\n';
+                cout << "Cores available:  " << scheduler_->getCoresAvailable() << "\n\n";
+
+                cout << "----------------------------\n";
+                cout << "Running processes:\n";
+
+                bool anyRunning = false;
+                for (int i = 0; i < cfg_.num_cpu; ++i) {
+                    auto core = scheduler_->getCore(i);
+                    if (core && core->isBusy()) {
+                        auto p = core->getRunningProcess();
+                        if (p) {
+                            // Format timestamp
+                            time_t now = time(nullptr);
+                            tm localtm{};
+#ifdef _WIN32
+                            localtime_s(&localtm, &now);
+#else
+                            localtime_r(&now, &localtm);
+#endif
+                            char timebuf[64];
+                            strftime(timebuf, sizeof(timebuf), "%m/%d/%Y %I:%M:%S%p", &localtm);
+
+                            cout << setw(4) << left << p->getName()
+                                << " (" << timebuf << ") "
+                                << "Core:" << i << " "
+                                << p->getCurrentInstructionIndex() << " / "
+                                << p->getTotalInstructions() << "\n";
+                            anyRunning = true;
+                        }
+                    }
+                }
+
+                if (!anyRunning) {
+                    cout << "  No processes currently running.\n";
+                }
+
+                cout << "\nFinished processes:\n";
+                const auto& finished = scheduler_->getFinishedProcesses();
+                if (finished.empty()) {
+                    cout << "  No processes have finished.\n";
+                }
+                else {
+                    for (const auto& p : finished) {
+                        time_t ft = p->getFinishTime();
+                        tm localtm{};
+#ifdef _WIN32
+                        localtime_s(&localtm, &ft);
+#else
+                        localtime_r(&ft, &localtm);
+#endif
+                        char timebuf[64];
+                        strftime(timebuf, sizeof(timebuf), "%m/%d/%Y %I:%M:%S%p", &localtm);
+
+                        cout << setw(15) << left << p->getName()
+                            << " (" << timebuf << ") "
+                            << "Finished "
+                            << p->getTotalInstructions() << " / "
+                            << p->getTotalInstructions() << "\n";
+                    }
+                }
+
+
+                cout << "----------------------------\n";
+                }
+
+
+
+            
+            else if (trimmedLine == "scheduler-start") {
+                scheduler_->startProcessGeneration();
+                cout << "Scheduler process generation started." << endl;
+            }
+            else if (trimmedLine == "scheduler-stop") {
+                scheduler_->stopProcessGeneration();
+                cout << "Scheduler process generation stopped." << endl;
+            }
+            else if (trimmedLine == "report-util") {
+                generateReport();
             }
             else {
-                cout << "Specifications have not yet been initialized!" << endl;
+                cout << "[" << getCurrentTimestamp() << "] Unknown command: " << trimmedLine << '\n';
+            }
+        }
+    }
+
+    void generateReport() {
+        ofstream out("csopesy-log.txt");
+        if (!out) {
+            cout << "Error: Cannot create csopesy-log.txt\n";
+            return;
+        }
+
+        out << "CSOPESY Emulator Report - " << getCurrentTimestamp() << "\n\n";
+        out << "CPU utilization: " << fixed << setprecision(2) << scheduler_->getCpuUtilization() << "%" << endl;
+        out << "Cores used: " << scheduler_->getCoresUsed() << endl;
+        out << "Cores available: " << scheduler_->getCoresAvailable() << endl;
+
+        out << "\n----------------------------\n";
+        out << "Running processes:\n";
+
+        bool anyRunning = false;
+        for (int i = 0; i < cfg_.num_cpu; ++i) {
+            auto core = scheduler_->getCore(i);
+            if (core && core->isBusy()) {
+                auto p = core->getRunningProcess();
+                if (p) {
+                    time_t now = time(nullptr);
+                    tm localtm{};
+#ifdef _WIN32
+                    localtime_s(&localtm, &now);
+#else
+                    localtime_r(&localtm, &now);
+#endif
+                    char timebuf[64];
+                    strftime(timebuf, sizeof(timebuf), "%m/%d/%Y %I:%M:%S%p", &localtm);
+
+                    out << setw(15) << left << p->getName()
+                        << " (" << timebuf << ") "
+                        << "Core:" << i << " "
+                        << p->getCurrentInstructionIndex() << " / "
+                        << p->getTotalInstructions() << "\n";
+                    anyRunning = true;
+                }
+            }
+        }
+        if (!anyRunning) {
+            out << "  No processes currently running.\n";
+        }
+
+        out << "\nFinished processes:\n";
+        const auto& finished = scheduler_->getFinishedProcesses();
+        if (finished.empty()) {
+            out << "  No processes have finished.\n";
+        }
+        else {
+            for (const auto& p : finished) {
+                time_t ft = p->getFinishTime();
+                tm localtm{};
+#ifdef _WIN32
+                localtime_s(&localtm, &ft);
+#else
+                localtime_r(&localtm, &ft);
+#endif
+                char timebuf[64];
+                strftime(timebuf, sizeof(timebuf), "%m/%d/%Y %I:%M:%S%p", &localtm);
+
+                out << setw(15) << left << p->getName()
+                    << " (" << timebuf << ") "
+                    << "Finished "
+                    << p->getTotalInstructions() << " / "
+                    << p->getTotalInstructions() << "\n";
             }
         }
 
-
-    }
-    void generateReport() {
-        /* Re‑use same info printed by screen -ls */
-        ofstream out("csopesy-log.txt");
-        if (!out) { cout << "Cannot create csopesy-log.txt\n"; return; }
-
-        out << "CPU Cores : " << cfg_.num_cpu << '\n';
-        out << "Running   : " << '\n';
-        out << "Finished  : " << "\n\n";
-
-        //for (const auto& p : runningProcs_)  out << p << "  (RUN)\n";
-        //for (const auto& p : finishedProcs_) out << p << "  (FIN)\n";
-
+        out << "----------------------------\n";
         cout << "Report written to csopesy-log.txt\n";
     }
-    //CONFIG LOADER 
+
+    //CONFIG LOADER
     static string stripQuotes(string s) {
         if (!s.empty() && (s.front() == '\"' || s.front() == '\'')) s.erase(0, 1);
         if (!s.empty() && (s.back() == '\"' || s.back() == '\'')) s.pop_back();
@@ -171,8 +456,17 @@ private:
             cfg_.max_ins = stoull(kv.at("max-ins"));
             cfg_.delay_per_exec = stoull(kv.at("delay-per-exec"));
         }
+        catch (const out_of_range& oor) {
+            (void)oor; // Suppress unused variable warning
+            cout << "Malformed config.txt – missing field or value out of range (stoull conversion): " << oor.what() << '\n';
+            return false;
+        }
+        catch (const invalid_argument& ia) {
+            cout << "Malformed config.txt – invalid argument for conversion: " << ia.what() << '\n';
+            return false;
+        }
         catch (...) {
-            cout << "Malformed config.txt – missing field\n";
+            cout << "Malformed config.txt – missing field or unexpected error\n";
             return false;
         }
 
@@ -183,6 +477,19 @@ private:
         if (cfg_.scheduler != "fcfs" && cfg_.scheduler != "rr") {
             cout << "scheduler must be 'fcfs' or 'rr'\n"; return false;
         }
+        // Additional range checks for uint64_t parameters as per spec.
+        // For uint64_t, values are generally positive. Max limits are 2^32, but stoull already handles max uint64_t.
+        // We only need to check against 1 for minimums if they are specified in the config.
+        if (cfg_.quantum_cycles < 1 && cfg_.scheduler == "rr") { // Quantum must be at least 1 for RR
+            cout << "quantum-cycles must be at least 1 for Round Robin scheduler\n"; return false;
+        }
+        if (cfg_.batch_process_freq < 1) {
+            cout << "batch-process-freq must be at least 1\n"; return false;
+        }
+        if (cfg_.min_ins < 1 || cfg_.max_ins < 1 || cfg_.min_ins > cfg_.max_ins) {
+            cout << "min-ins and max-ins must be at least 1, and min-ins <= max-ins\n"; return false;
+        }
+
         return true;
     }
 
@@ -190,6 +497,6 @@ private:
     Config cfg_;
     bool   initialized_ = false;
     std::unique_ptr<Scheduler> scheduler_;          // created after init
-    std::vector<std::shared_ptr<Process>> processes_;
-    std::unique_ptr<Screen> activeScreen_;          // one attached screen
+    std::unique_ptr<Screen> activeScreen_;          // one attached screen at a time
+    std::thread cpuTickThread; // Thread for the global CPU tick counter
 };

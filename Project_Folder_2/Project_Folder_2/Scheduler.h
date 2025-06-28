@@ -1,43 +1,87 @@
+
 #pragma once
 #include <vector>
-#include <thread>
-#include <atomic>
-#include <memory>
 #include <string>
-#include "Process.h";
-#include "Core.h";
-using namespace std;
+#include <memory>
+#include <thread>
+#include <mutex>
+#include <atomic>
+#include <condition_variable>
+#include <unordered_set> 
 
-/*
-    SCHEDULER OVERVIEW
-    - Keeps a pool of Core objects
-    - Launches a schedulerLoop() thread that:
-    - Watches readyQ_
-    - Finds a free core
-    - Sends process to core->tryAssign(p, quantum_)
-    - quantum_ determines if it's RR or FCFS
-*/
-
-template <typename T> class TSQueue;  // your thread-safe queue
+#include "Core.h"
+#include "Process.h"
+#include "ThreadedQueue.h"
+#include "GlobalState.h"
 
 class Scheduler {
 public:
-    Scheduler(int numCores, string algo, uint64_t quantum);
+    Scheduler(int num_cpu, const std::string& scheduler_type, uint64_t quantum_cycles,
+        uint64_t batch_process_freq, uint64_t min_ins, uint64_t max_ins,
+        uint64_t delay_per_exec);
     ~Scheduler();
 
-    void start();  // start scheduler thread
-    void stop();   // join scheduler thread
+    void start();
+    void stop();
+    void submit(std::shared_ptr<Process> p);
+    void notifyProcessFinished();
+    void requeueProcess(std::shared_ptr<Process> p);
+    void startProcessGeneration();
+    void stopProcessGeneration();
+    void waitUntilAllDone();
 
-    shared_ptr<Process> createProcess(const string& name);
+    void addFinishedProcess(std::shared_ptr<Process> p);
+
+    int getNextProcessId();
+
+    std::vector<std::shared_ptr<Process>> getRunningProcesses() const;
+    std::vector<std::shared_ptr<Process>> getFinishedProcesses() const;
+    std::vector<std::shared_ptr<Process>> getSleepingProcesses() const;
+
+    double getCpuUtilization() const;
+    int getCoresUsed() const;
+    int getCoresAvailable() const;
+
+    void updateCoreUtilization(int coreId, uint64_t ticksUsed);
+    Core* getCore(int index) const;
 
 private:
-    void schedulerLoop();  // running in background
+    void schedulerLoop();
+    void processGeneratorLoop();
 
-    string algorithm;     // "fcfs" or "rr"
-    uint64_t quantum;       // quantum per slice
-    bool running = false;
-    thread schedThread;
+    int numCpus_;
+    int nextCoreIndex_ = 0;
+    std::string schedulerType_;
+    uint64_t quantumCycles_;
+    uint64_t batchProcessFreq_;
+    uint64_t minInstructions_;
+    uint64_t maxInstructions_;
+    uint64_t delayPerExec_;
 
-    vector<shared_ptr<Core>> cores; //oki but shared pointer (what if core children thread ng scheduler)
-    TSQueue<shared_ptr<Process>>* readyQ;   // inject or own queue
+    std::vector<std::unique_ptr<Core>> cores_;
+    TSQueue<std::shared_ptr<Process>> readyQueue_;
+
+    mutable std::mutex runningProcessesMutex_;
+    std::vector<std::shared_ptr<Process>> runningProcesses_;
+
+    mutable std::mutex finishedProcessesMutex_;
+    std::vector<std::shared_ptr<Process>> finishedProcesses_;
+    std::unordered_set<int> finishedPIDs_;
+
+    mutable std::mutex sleepingProcessesMutex_;
+    std::vector<std::shared_ptr<Process>> sleepingProcesses_;
+
+    std::thread schedulerThread_;
+    std::atomic<bool> running_ = false;
+
+    std::thread processGenThread_;
+    std::atomic<bool> processGenEnabled_ = false;
+    std::atomic<uint64_t> lastProcessGenTick_ = 0;
+
+    std::atomic<int> nextPid_ = 1;
+    std::atomic<int> activeProcessesCount_ = 0;
+
+    std::vector<std::unique_ptr<std::atomic<uint64_t>>> coreTicksUsed_;
+    std::atomic<uint64_t> schedulerStartTime_ = 0;
 };
+
