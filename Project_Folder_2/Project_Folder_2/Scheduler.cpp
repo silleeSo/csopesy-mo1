@@ -36,10 +36,24 @@ void Scheduler::start() {
 }
 
 void Scheduler::stop() {
+    // Signal all cores to stop their work immediately.
+    for (const auto& core : cores_) {
+        if (core) {
+            core->stop();
+        }
+    }
+
+    // Stop the scheduler and process generator loops
     running_ = false;
     processGenEnabled_ = false;
-    if (schedulerThread_.joinable()) schedulerThread_.join();
-    if (processGenThread_.joinable()) processGenThread_.join();
+
+    // Join the scheduler's own threads
+    if (schedulerThread_.joinable()) {
+        schedulerThread_.join();
+    }
+    if (processGenThread_.joinable()) {
+        processGenThread_.join();
+    }
 }
 
 void Scheduler::submit(std::shared_ptr<Process> p) {
@@ -108,18 +122,13 @@ std::vector<std::shared_ptr<Process>> Scheduler::getSleepingProcesses() const {
 }
 
 double Scheduler::getCpuUtilization() const {
-    uint64_t currentSystemTicks = globalCpuTicks.load() - schedulerStartTime_.load();
-    if (currentSystemTicks == 0 || numCpus_ == 0) return 0.0;
+    if (numCpus_ == 0) return 0.0;
 
-    double busyTicks = 0.0;
-    for (const auto& ticks : coreTicksUsed_) {
-        busyTicks += static_cast<double>(ticks->load());
-    }
+    int busyCores = getCoresUsed();
+    double utilization = static_cast<double>(busyCores) / numCpus_ * 100.0;
 
-    double utilization = (busyTicks / static_cast<double>(std::max(globalCpuTicks.load(), 1ULL) * numCpus_)) * 100.0;
-    return std::min(100.0, utilization);
+    return utilization;
 }
-
 
 int Scheduler::getCoresUsed() const {
     return static_cast<int>(std::count_if(cores_.begin(), cores_.end(), [](const auto& core) {
@@ -155,6 +164,8 @@ void Scheduler::addFinishedProcess(std::shared_ptr<Process> p) {
 }
 
 void Scheduler::schedulerLoop() {
+    // if (cores_.empty()) return;
+
     while (running_.load()) {
         // Wake sleeping processes
         {
@@ -174,7 +185,7 @@ void Scheduler::schedulerLoop() {
         }
 
         // Assign ready processes to free cores
-        for (int i = 0; i < cores_.size(); ++i) {
+        for (size_t i = 0; i < cores_.size(); ++i) {
             int index = (nextCoreIndex_ + i) % cores_.size();
             auto& core = cores_[index];
 

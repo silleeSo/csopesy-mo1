@@ -12,6 +12,10 @@ Core::~Core() {
     }
 }
 
+void Core::stop() {
+    busy_ = false;
+}
+
 bool Core::isBusy() const {
     return busy_;
 }
@@ -43,7 +47,7 @@ bool Core::tryAssign(std::shared_ptr<Process> p, uint64_t quantum) {
 void Core::workerLoop(std::shared_ptr<Process> p, uint64_t quantum) {
     uint64_t executed = 0;
 
-    while (!p->isFinished() && executed < quantum) {
+    while (busy_.load() && !p->isFinished() && executed < quantum) {
         if (p->isSleeping()) {
             if (scheduler) scheduler->requeueProcess(p);
             break;

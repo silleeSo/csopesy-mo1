@@ -36,6 +36,8 @@ public:
         return busy_ ? runningProcess : nullptr;
     }
 
+    void stop();
+
 
 private:
     void workerLoop(shared_ptr<Process> p, uint64_t quantum);
